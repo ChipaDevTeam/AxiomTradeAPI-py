@@ -1,4 +1,4 @@
-websockets==10.0
+websockets==15.0.1
 python-dotenv
 solders
 requests>=2.25.1
