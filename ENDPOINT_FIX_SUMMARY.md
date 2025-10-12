@@ -33,12 +33,17 @@ This fix affects the following endpoints:
 - `/send-transaction` → `https://axiom.trade/api/send-transaction`
 
 ## Affected Methods
-- `AxiomTradeClient.GetBalance()`
-- `AxiomTradeClient.GetBatchedBalance()`
-- `AxiomTradeClient.buy_token()`
-- `AxiomTradeClient.sell_token()`
-- `AxiomTradeClient.get_token_balance()`
-- `AxiomTradeClient.get_sol_balance()` (in enhanced client)
+
+### Default Client (`AxiomTradeClient` from `_client.py`)
+- `AxiomTradeClient.GetBalance()` - Get balance for a single wallet
+- `AxiomTradeClient.GetBatchedBalance()` - Get balances for multiple wallets
+- `AxiomTradeClient.buy_token()` - Buy tokens
+- `AxiomTradeClient.sell_token()` - Sell tokens
+- `AxiomTradeClient.get_token_balance()` - Get token balance
+
+### Enhanced Client (`EnhancedAxiomTradeClient` from `client.py`)
+- `EnhancedAxiomTradeClient.get_sol_balance()` - Get SOL balance
+- `EnhancedAxiomTradeClient.get_token_balance()` - Get token balance
 
 ## Verification
 All endpoint URLs have been verified to match the expected format used by the Axiom Trade web application.
