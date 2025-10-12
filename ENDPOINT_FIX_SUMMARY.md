@@ -34,20 +34,24 @@ This fix affects the following endpoints:
 
 ## Affected Methods
 
-### Default Client (`AxiomTradeClient` from `_client.py`)
-- `AxiomTradeClient.GetBalance()` - Get balance for a single wallet
-- `AxiomTradeClient.GetBatchedBalance()` - Get balances for multiple wallets
-- `AxiomTradeClient.buy_token()` - Buy tokens
-- `AxiomTradeClient.sell_token()` - Sell tokens
-- `AxiomTradeClient.get_token_balance()` - Get token balance
+### Default Client (`AxiomTradeClient`)
+These methods in the default `AxiomTradeClient` class are now fixed:
+- `GetBalance()` - Get balance for a single wallet
+- `GetBatchedBalance()` - Get balances for multiple wallets
+- `buy_token()` - Buy tokens
+- `sell_token()` - Sell tokens
+- `get_token_balance()` - Get token balance
 
-### Enhanced Client (`EnhancedAxiomTradeClient` from `client.py`)
-- `EnhancedAxiomTradeClient.get_sol_balance()` - Get SOL balance
-- `EnhancedAxiomTradeClient.get_token_balance()` - Get token balance
+### Enhanced Client (`EnhancedAxiomTradeClient`)
+These methods in the enhanced client are now fixed:
+- `get_sol_balance()` - Get SOL balance
+- `get_token_balance()` - Get token balance
 
 ## Verification
 All endpoint URLs have been verified to match the expected format used by the Axiom Trade web application.
 
 ## Notes
-- Authentication endpoints (like `refresh_access_token`) continue to use their respective base URLs (e.g., `api9.axiom.trade`)
-- Other feature endpoints (trending tokens, portfolio) remain unchanged as they were already working correctly
+- Authentication endpoints (like `refresh_access_token` at `api9.axiom.trade`) continue to use their respective base URLs - these were already working correctly
+- Trending tokens endpoint (`/meme-trending` at `api6.axiom.trade`) remains unchanged - this was already working correctly
+- Portfolio endpoint (`/portfolio` at `api6.axiom.trade`) remains unchanged - this was already working correctly
+- **Only balance and trading endpoints** were affected by this fix, as they are the ones that should use `https://axiom.trade/api`
