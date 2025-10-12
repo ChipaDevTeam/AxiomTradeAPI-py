@@ -1,6 +1,6 @@
 class Endpoints:
     # Base Urls
-    BASE_URL_API = "https://api6.axiom.trade"
+    BASE_URL_API = "https://axiom.trade/api"
     BASE_URL = "https://axiom.trade"
 
     # Endpoints
