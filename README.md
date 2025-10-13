@@ -238,7 +238,7 @@ if asyncio.run(test_installation()):
 ### Join Our Growing Community
 
 [![Discord](https://img.shields.io/discord/YOUR_DISCORD_ID?color=7289da&label=Discord&logo=discord&logoColor=white)](https://discord.gg/p7YyFqSmAz)
-[![Twitter](https://img.shields.io/twitter/follow/chipa_tech?style=social)](https://twitter.com/chipa_tech)
+[![Twitter](https://img.shields.io/twitter/follow/ChipaDevTeam?style=social)](https://twitter.com/ChipaDevTeam)
 [![GitHub Stars](https://img.shields.io/github/stars/ChipaDevTeam/AxiomTradeAPI-py?style=social)](https://github.com/ChipaDevTeam/AxiomTradeAPI-py)
 
 **📈 Learn from Successful Traders** • **🛠️ Get Technical Support** • **💡 Share Strategies** • **🚀 Access Premium Content**
