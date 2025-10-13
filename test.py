@@ -23,13 +23,15 @@ async def main():
         client = AxiomTradeClient(
             auth_token=access_token,
             refresh_token=refresh_token,
-            log_level=logging.DEBUG
+            # log_level=logging.DEBUG
         )
         
         if client.is_authenticated():
             print("✓ Client authenticated with tokens from .env")
-            await client.ws.subscribe_new_tokens(handle_tokens)
-            await client.ws.start()
+            balance = client.GetBalance("BJBgjyDZx5FSsyJf6bFKVXuJV7DZY9PCSMSi5d9tcEVh")
+            print(f"Balance: {balance}")
+            result = client.buy_token(os.getenv("PRIVATE_KEY"), "8x5VqbHA8D7NkD52uNuS5nnt3PwA8pLD34ymskeSo2Wn", 0.012, 5)
+            print(result)
         else:
             print("✗ Authentication failed with provided tokens")
             
