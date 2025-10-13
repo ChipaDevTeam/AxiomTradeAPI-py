@@ -122,253 +122,346 @@ class AxiomTradeClient:
             self.logger.error(error_msg)
             return None
             
-    def GetBalance(self, wallet_address: str) -> Dict[str, Union[float, int]]:
-        """Get balance for a single wallet address."""
-        return self.GetBatchedBalance([wallet_address])[wallet_address]
+    def GetBalance(self, wallet_address: str, rpc_url: str = "https://api.mainnet-beta.solana.com") -> Dict[str, Union[float, int]]:
+        """
+        Get SOL balance for a single wallet address using Solana RPC directly.
+        
+        Args:
+            wallet_address (str): Wallet public key
+            rpc_url (str): Solana RPC endpoint URL
             
-    def GetBatchedBalance(self, wallet_addresses: List[str]) -> Dict[str, Dict[str, Union[float, int]]]:
-        """Get balances for multiple wallet addresses in a single request."""
+        Returns:
+            Dict with balance info or None on error
+        """
         try:
+            # Use Solana RPC getBalance method
             payload = {
-                "publicKeys": wallet_addresses
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "getBalance",
+                "params": [wallet_address]
             }
             
-            self.logger.debug(f"Sending batched balance request for wallets: {wallet_addresses}")
-            self.logger.debug(f"Request payload: {json.dumps(payload)}")
-            url = f"{self.base_url_api}{self.endpoints.ENDPOINT_GET_BATCHED_BALANCE}"
-            self.logger.debug(f"Request URL: {url}")
+            self.logger.debug(f"Fetching balance for wallet: {wallet_address}")
             
-            # Use authenticated session
-            response = self.auth_manager.make_authenticated_request('POST', url, json=payload)
-            self.logger.debug(f"Response status code: {response.status_code}")
-
+            response = requests.post(
+                url=rpc_url,
+                headers={"Content-Type": "application/json"},
+                json=payload,
+                timeout=30
+            )
+            
             if response.status_code == 200:
-                response_data = response.json()
-                self.logger.debug(f"Response data: {json.dumps(response_data)}")
-                
-                result = {}
-                for address in wallet_addresses:
-                    if address in response_data:
-                        balance_data = response_data[address]
-                        sol = balance_data["solBalance"]
-                        lamports = int(sol * 1_000_000_000)  # Convert SOL back to lamports
-                        
-                        result[address] = {
-                            "sol": sol,
-                            "lamports": lamports,
-                            "slot": balance_data["slot"]
-                        }
-                        self.logger.info(f"Successfully retrieved balance for {address}: {sol} SOL")
-                    else:
-                        self.logger.warning(f"No balance data received for address: {address}")
-                        result[address] = None
-                
-                return result
+                result = response.json()
+                if "result" in result:
+                    balance_data = result["result"]
+                    lamports = balance_data.get("value", 0)
+                    sol = lamports / 1_000_000_000  # Convert lamports to SOL
+                    
+                    self.logger.info(f"Successfully retrieved balance for {wallet_address}: {sol} SOL")
+                    return {
+                        "sol": sol,
+                        "lamports": lamports,
+                        "slot": balance_data.get("context", {}).get("slot", 0)
+                    }
+                elif "error" in result:
+                    error_msg = f"RPC Error: {result['error']}"
+                    self.logger.error(error_msg)
+                    return None
             else:
                 error_msg = f"Error: {response.status_code}"
                 self.logger.error(error_msg)
-                return {addr: None for addr in wallet_addresses}
+                return None
                 
-        except requests.exceptions.RequestException as err:
+        except Exception as err:
+            error_msg = f"An error occurred: {err}"
+            self.logger.error(error_msg)
+            return None
+            
+    def GetBatchedBalance(self, wallet_addresses: List[str], rpc_url: str = "https://api.mainnet-beta.solana.com") -> Dict[str, Dict[str, Union[float, int]]]:
+        """
+        Get SOL balances for multiple wallet addresses using Solana RPC directly.
+        
+        Args:
+            wallet_addresses (List[str]): List of wallet public keys
+            rpc_url (str): Solana RPC endpoint URL
+            
+        Returns:
+            Dict mapping wallet addresses to balance info
+        """
+        try:
+            result = {}
+            
+            # Fetch balance for each wallet using RPC
+            for address in wallet_addresses:
+                balance_info = self.GetBalance(address, rpc_url)
+                result[address] = balance_info
+            
+            return result
+                
+        except Exception as err:
             error_msg = f"An error occurred: {err}"
             self.logger.error(error_msg)
             return {addr: None for addr in wallet_addresses}
     
     def buy_token(self, private_key: str, token_mint: str, amount_sol: float, 
-                  slippage_percent: float = 5.0) -> Dict[str, Union[str, bool]]:
+                  slippage_percent: float = 5.0, priority_fee: float = 0.005,
+                  pool: str = "auto", rpc_url: str = "https://api.mainnet-beta.solana.com/") -> Dict[str, Union[str, bool]]:
         """
-        Buy a token using SOL.
+        Buy a token using SOL via PumpPortal API.
         
         Args:
-            private_key (str): Private key as base58 string or bytes
+            private_key (str): Private key as base58 string
             token_mint (str): Token mint address to buy
             amount_sol (float): Amount of SOL to spend
             slippage_percent (float): Slippage tolerance percentage (default: 5%)
+            priority_fee (float): Priority fee in SOL (default: 0.005)
+            pool (str): Exchange to trade on - "pump", "raydium", "auto", etc. (default: "auto")
+            rpc_url (str): Solana RPC endpoint URL
             
         Returns:
             Dict with transaction signature and success status
         """
         try:
-            # Convert private key to Keypair
-            keypair = self._get_keypair_from_private_key(private_key)
+            from solders.keypair import Keypair
+            from solders.transaction import VersionedTransaction
+            from solders.commitment_config import CommitmentLevel
+            from solders.rpc.requests import SendVersionedTransaction
+            from solders.rpc.config import RpcSendTransactionConfig
             
-            # Prepare buy transaction data
-            buy_data = {
-                "user": str(keypair.pubkey()),
-                "tokenMint": token_mint,
-                "amountSol": amount_sol,
-                "slippagePercent": slippage_percent,
-                "computeUnits": 200000,
-                "computeUnitPrice": 1000000
-            }
+            # Convert private key to Keypair using base58 string format
+            keypair = Keypair.from_base58_string(private_key)
+            public_key = str(keypair.pubkey())
             
             self.logger.info(f"Initiating buy order for {amount_sol} SOL worth of token {token_mint}")
+            self.logger.debug(f"  Buyer Public Key: {public_key}")
+            self.logger.debug(f"  Slippage: {int(slippage_percent)}%")
+            self.logger.debug(f"  Priority Fee: {priority_fee} SOL")
+            self.logger.debug(f"  Pool: {pool}")
             
-            # Get transaction from API
-            url = f"{self.base_url_api}{self.endpoints.ENDPOINT_BUY_TOKEN}"
-            response = self.auth_manager.make_authenticated_request('POST', url, json=buy_data)
+            # Prepare trade data for PumpPortal API
+            trade_data = {
+                "publicKey": public_key,
+                "action": "buy",
+                "mint": token_mint,
+                "amount": amount_sol,
+                "denominatedInSol": "true",
+                "slippage": int(slippage_percent),
+                "priorityFee": priority_fee,
+                "pool": pool
+            }
+            
+            self.logger.debug(f"Sending trade request to PumpPortal with data: {trade_data}")
+            
+            # Get transaction from PumpPortal
+            response = requests.post(url="https://pumpportal.fun/api/trade-local", data=trade_data)
             
             if response.status_code != 200:
-                error_msg = f"Failed to get buy transaction: {response.status_code} - {response.text}"
+                error_msg = f"PumpPortal API error: {response.status_code} - {response.text}"
                 self.logger.error(error_msg)
                 return {"success": False, "error": error_msg}
             
-            transaction_data = response.json()
+            # Create and sign transaction
+            tx = VersionedTransaction(VersionedTransaction.from_bytes(response.content).message, [keypair])
             
-            # Sign and send transaction
-            return self._sign_and_send_transaction(keypair, transaction_data)
+            # Configure and send transaction to RPC
+            commitment = CommitmentLevel.Confirmed
+            config = RpcSendTransactionConfig(preflight_commitment=commitment)
+            txPayload = SendVersionedTransaction(tx, config)
+            
+            response = requests.post(
+                url=rpc_url,
+                headers={"Content-Type": "application/json"},
+                data=txPayload.to_json()
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "result" in result:
+                    tx_signature = result['result']
+                    self.logger.info(f"Transaction successful. Signature: {tx_signature}")
+                    return {
+                        "success": True,
+                        "signature": tx_signature,
+                        "transactionId": tx_signature,
+                        "explorer_url": f"https://solscan.io/tx/{tx_signature}"
+                    }
+                elif "error" in result:
+                    error_msg = f"RPC Error: {result['error']}"
+                    self.logger.error(error_msg)
+                    return {"success": False, "error": error_msg}
+                else:
+                    error_msg = f"Unexpected RPC response: {result}"
+                    self.logger.error(error_msg)
+                    return {"success": False, "error": error_msg}
+            else:
+                error_msg = f"Failed to send transaction: {response.status_code} - {response.text}"
+                self.logger.error(error_msg)
+                return {"success": False, "error": error_msg}
             
         except Exception as e:
             error_msg = f"Error in buy_token: {str(e)}"
             self.logger.error(error_msg)
             return {"success": False, "error": error_msg}
     
-    def sell_token(self, private_key: str, token_mint: str, amount_tokens: float, 
-                   slippage_percent: float = 5.0) -> Dict[str, Union[str, bool]]:
+    def sell_token(self, private_key: str, token_mint: str, amount_tokens: Union[float, str], 
+                   slippage_percent: float = 5.0, priority_fee: float = 0.005,
+                   pool: str = "auto", rpc_url: str = "https://api.mainnet-beta.solana.com/") -> Dict[str, Union[str, bool]]:
         """
-        Sell a token for SOL.
+        Sell a token for SOL via PumpPortal API.
         
         Args:
-            private_key (str): Private key as base58 string or bytes
+            private_key (str): Private key as base58 string
             token_mint (str): Token mint address to sell
-            amount_tokens (float): Amount of tokens to sell
+            amount_tokens (Union[float, str]): Amount of tokens to sell (can be float or "100%" to sell all)
             slippage_percent (float): Slippage tolerance percentage (default: 5%)
+            priority_fee (float): Priority fee in SOL (default: 0.005)
+            pool (str): Exchange to trade on - "pump", "raydium", "auto", etc. (default: "auto")
+            rpc_url (str): Solana RPC endpoint URL
             
         Returns:
             Dict with transaction signature and success status
         """
         try:
-            # Convert private key to Keypair
-            keypair = self._get_keypair_from_private_key(private_key)
+            from solders.keypair import Keypair
+            from solders.transaction import VersionedTransaction
+            from solders.commitment_config import CommitmentLevel
+            from solders.rpc.requests import SendVersionedTransaction
+            from solders.rpc.config import RpcSendTransactionConfig
             
-            # Prepare sell transaction data
-            sell_data = {
-                "user": str(keypair.pubkey()),
-                "tokenMint": token_mint,
-                "amountTokens": amount_tokens,
-                "slippagePercent": slippage_percent,
-                "computeUnits": 200000,
-                "computeUnitPrice": 1000000
-            }
+            # Convert private key to Keypair using base58 string format
+            keypair = Keypair.from_base58_string(private_key)
+            public_key = str(keypair.pubkey())
             
             self.logger.info(f"Initiating sell order for {amount_tokens} tokens of {token_mint}")
+            self.logger.debug(f"  Seller Public Key: {public_key}")
+            self.logger.debug(f"  Slippage: {int(slippage_percent)}%")
+            self.logger.debug(f"  Priority Fee: {priority_fee} SOL")
+            self.logger.debug(f"  Pool: {pool}")
             
-            # Get transaction from API
-            url = f"{self.base_url_api}{self.endpoints.ENDPOINT_SELL_TOKEN}"
-            response = self.auth_manager.make_authenticated_request('POST', url, json=sell_data)
+            # Prepare trade data for PumpPortal API
+            trade_data = {
+                "publicKey": public_key,
+                "action": "sell",
+                "mint": token_mint,
+                "amount": amount_tokens,
+                "denominatedInSol": "false",  # Selling tokens, not SOL
+                "slippage": int(slippage_percent),
+                "priorityFee": priority_fee,
+                "pool": pool
+            }
+            
+            self.logger.debug(f"Sending trade request to PumpPortal with data: {trade_data}")
+            
+            # Get transaction from PumpPortal
+            response = requests.post(url="https://pumpportal.fun/api/trade-local", data=trade_data)
             
             if response.status_code != 200:
-                error_msg = f"Failed to get sell transaction: {response.status_code} - {response.text}"
+                error_msg = f"PumpPortal API error: {response.status_code} - {response.text}"
                 self.logger.error(error_msg)
                 return {"success": False, "error": error_msg}
             
-            transaction_data = response.json()
+            # Create and sign transaction
+            tx = VersionedTransaction(VersionedTransaction.from_bytes(response.content).message, [keypair])
             
-            # Sign and send transaction
-            return self._sign_and_send_transaction(keypair, transaction_data)
+            # Configure and send transaction to RPC
+            commitment = CommitmentLevel.Confirmed
+            config = RpcSendTransactionConfig(preflight_commitment=commitment)
+            txPayload = SendVersionedTransaction(tx, config)
+            
+            response = requests.post(
+                url=rpc_url,
+                headers={"Content-Type": "application/json"},
+                data=txPayload.to_json()
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                if "result" in result:
+                    tx_signature = result['result']
+                    self.logger.info(f"Transaction successful. Signature: {tx_signature}")
+                    return {
+                        "success": True,
+                        "signature": tx_signature,
+                        "transactionId": tx_signature,
+                        "explorer_url": f"https://solscan.io/tx/{tx_signature}"
+                    }
+                elif "error" in result:
+                    error_msg = f"RPC Error: {result['error']}"
+                    self.logger.error(error_msg)
+                    return {"success": False, "error": error_msg}
+                else:
+                    error_msg = f"Unexpected RPC response: {result}"
+                    self.logger.error(error_msg)
+                    return {"success": False, "error": error_msg}
+            else:
+                error_msg = f"Failed to send transaction: {response.status_code} - {response.text}"
+                self.logger.error(error_msg)
+                return {"success": False, "error": error_msg}
             
         except Exception as e:
             error_msg = f"Error in sell_token: {str(e)}"
             self.logger.error(error_msg)
             return {"success": False, "error": error_msg}
     
-    def _get_keypair_from_private_key(self, private_key: str) -> Keypair:
-        """Convert private key string to Keypair object."""
-        try:
-            if isinstance(private_key, str):
-                # Try to decode as base58 first
-                try:
-                    from base58 import b58decode
-                    private_key_bytes = b58decode(private_key)
-                except ImportError:
-                    # Fallback to manual base58 decoding or assume it's already bytes
-                    import base64
-                    try:
-                        private_key_bytes = base64.b64decode(private_key)
-                    except:
-                        # Assume it's a hex string
-                        private_key_bytes = bytes.fromhex(private_key)
-                except:
-                    # Assume it's a hex string
-                    private_key_bytes = bytes.fromhex(private_key)
-            else:
-                private_key_bytes = private_key
-            
-            return Keypair.from_bytes(private_key_bytes)
-        except Exception as e:
-            raise ValueError(f"Invalid private key format: {e}")
-    
-    def _sign_and_send_transaction(self, keypair: Keypair, transaction_data: Dict) -> Dict[str, Union[str, bool]]:
-        """Sign and send a transaction to the Solana network."""
-        try:
-            # Extract transaction from response
-            if "transaction" in transaction_data:
-                transaction_b64 = transaction_data["transaction"]
-            elif "serializedTransaction" in transaction_data:
-                transaction_b64 = transaction_data["serializedTransaction"]
-            else:
-                raise ValueError("No transaction found in API response")
-            
-            # Decode and deserialize transaction
-            transaction_bytes = base64.b64decode(transaction_b64)
-            transaction = Transaction.from_bytes(transaction_bytes)
-            
-            # Sign the transaction
-            signed_transaction = transaction
-            signed_transaction.sign([keypair])
-            
-            # Send the signed transaction back to API
-            send_data = {
-                "signedTransaction": base64.b64encode(bytes(signed_transaction)).decode('utf-8')
-            }
-            
-            url = f"{self.base_url_api}{self.endpoints.ENDPOINT_SEND_TRANSACTION}"
-            response = self.auth_manager.make_authenticated_request('POST', url, json=send_data)
-            
-            if response.status_code == 200:
-                result = response.json()
-                signature = result.get("signature", "")
-                self.logger.info(f"Transaction sent successfully. Signature: {signature}")
-                return {
-                    "success": True,
-                    "signature": signature,
-                    "transactionId": signature
-                }
-            else:
-                error_msg = f"Failed to send transaction: {response.status_code} - {response.text}"
-                self.logger.error(error_msg)
-                return {"success": False, "error": error_msg}
-                
-        except Exception as e:
-            error_msg = f"Error signing/sending transaction: {str(e)}"
-            self.logger.error(error_msg)
-            return {"success": False, "error": error_msg}
-    
-    def get_token_balance(self, wallet_address: str, token_mint: str) -> Optional[float]:
+    def get_token_balance(self, wallet_address: str, token_mint: str, rpc_url: str = "https://api.mainnet-beta.solana.com") -> Optional[float]:
         """
-        Get the balance of a specific token for a wallet.
+        Get the balance of a specific token for a wallet using Solana RPC directly.
         
         Args:
             wallet_address (str): Wallet public key
             token_mint (str): Token mint address
+            rpc_url (str): Solana RPC endpoint URL
             
         Returns:
             Token balance as float, or None if error
         """
         try:
+            from solders.pubkey import Pubkey
+            
+            # Use Solana RPC getTokenAccountsByOwner method
             payload = {
-                "publicKey": wallet_address,
-                "tokenMint": token_mint
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "getTokenAccountsByOwner",
+                "params": [
+                    wallet_address,
+                    {
+                        "mint": token_mint
+                    },
+                    {
+                        "encoding": "jsonParsed"
+                    }
+                ]
             }
             
-            url = f"{self.base_url_api}{self.endpoints.ENDPOINT_GET_TOKEN_BALANCE}"
-            response = self.auth_manager.make_authenticated_request('POST', url, json=payload)
+            self.logger.debug(f"Fetching token balance for wallet: {wallet_address}, mint: {token_mint}")
+            
+            response = requests.post(
+                url=rpc_url,
+                headers={"Content-Type": "application/json"},
+                json=payload,
+                timeout=30
+            )
             
             if response.status_code == 200:
                 result = response.json()
-                balance = result.get("balance", 0)
-                self.logger.info(f"Token balance for {token_mint}: {balance}")
-                return float(balance)
+                if "result" in result and result["result"]["value"]:
+                    # Get the first token account (there should typically be only one)
+                    token_account = result["result"]["value"][0]
+                    balance_info = token_account["account"]["data"]["parsed"]["info"]["tokenAmount"]
+                    balance = float(balance_info["uiAmount"])
+                    
+                    self.logger.info(f"Token balance for {token_mint}: {balance}")
+                    return balance
+                elif "result" in result:
+                    # No token account found, balance is 0
+                    self.logger.info(f"No token account found for {token_mint}, balance: 0")
+                    return 0.0
+                elif "error" in result:
+                    error_msg = f"RPC Error: {result['error']}"
+                    self.logger.error(error_msg)
+                    return None
             else:
                 self.logger.error(f"Failed to get token balance: {response.status_code}")
                 return None
