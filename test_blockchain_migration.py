@@ -8,6 +8,11 @@ import logging
 import sys
 from axiomtradeapi import AxiomTradeClient
 
+# Test constants
+TEST_WALLET_MAINNET = "4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY"  # Example mainnet wallet
+SYSTEM_PROGRAM_ADDRESS = "11111111111111111111111111111111"  # Solana system program
+USDC_MINT_MAINNET = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"  # USDC on Solana mainnet
+
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
@@ -30,7 +35,7 @@ def test_balance_method():
         )
         
         # Test with a known Solana address (devnet faucet address)
-        test_wallet = "4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY"
+        test_wallet = TEST_WALLET_MAINNET
         
         logger.info(f"Fetching balance for wallet: {test_wallet}")
         balance = client.GetBalance(test_wallet)
@@ -65,8 +70,8 @@ def test_batched_balance_method():
         
         # Test with multiple known addresses
         test_wallets = [
-            "4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY",
-            "11111111111111111111111111111111"  # System program address
+            TEST_WALLET_MAINNET,
+            SYSTEM_PROGRAM_ADDRESS
         ]
         
         logger.info(f"Fetching balances for {len(test_wallets)} wallets")
@@ -103,9 +108,8 @@ def test_token_balance_method():
         )
         
         # Test wallet and token (using a common token mint for testing)
-        test_wallet = "4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY"
-        # USDC mint address on Solana mainnet
-        usdc_mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+        test_wallet = TEST_WALLET_MAINNET
+        usdc_mint = USDC_MINT_MAINNET
         
         logger.info(f"Fetching token balance for wallet: {test_wallet}")
         logger.info(f"Token mint: {usdc_mint}")

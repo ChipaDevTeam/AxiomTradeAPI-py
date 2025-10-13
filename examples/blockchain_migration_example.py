@@ -76,7 +76,14 @@ def example_buy_token():
     """
     Example: Buy a token using PumpPortal API
     
-    NOTE: This requires a valid private key and will execute a real transaction!
+    ⚠️  IMPORTANT SAFETY NOTES:
+    - This executes a REAL transaction with REAL money
+    - Test on DEVNET first before using mainnet
+    - Use small amounts for initial testing
+    - Verify addresses and amounts carefully
+    
+    For devnet testing, use devnet RPC:
+    rpc_url="https://api.devnet.solana.com"
     """
     print("=" * 60)
     print("Example 3: Buy Token via PumpPortal")
@@ -89,6 +96,7 @@ def example_buy_token():
     
     # IMPORTANT: This will execute a real transaction!
     # Make sure you understand what you're doing before uncommenting
+    # For testing, use devnet first: rpc_url="https://api.devnet.solana.com"
     
     # result = client.buy_token(
     #     private_key=os.getenv("PRIVATE_KEY"),
@@ -114,7 +122,14 @@ def example_sell_token():
     """
     Example: Sell a token using PumpPortal API
     
-    NOTE: This requires a valid private key and will execute a real transaction!
+    ⚠️  IMPORTANT SAFETY NOTES:
+    - This executes a REAL transaction with REAL money
+    - Test on DEVNET first before using mainnet
+    - Use small amounts for initial testing
+    - Verify addresses and amounts carefully
+    
+    For devnet testing, use devnet RPC:
+    rpc_url="https://api.devnet.solana.com"
     """
     print("=" * 60)
     print("Example 4: Sell Token via PumpPortal")
@@ -127,6 +142,7 @@ def example_sell_token():
     
     # IMPORTANT: This will execute a real transaction!
     # Make sure you understand what you're doing before uncommenting
+    # For testing, use devnet first: rpc_url="https://api.devnet.solana.com"
     
     # Sell specific amount
     # result = client.sell_token(

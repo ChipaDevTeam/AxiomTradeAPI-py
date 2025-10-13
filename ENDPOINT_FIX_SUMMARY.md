@@ -94,8 +94,11 @@ Balance operations use standard Solana JSON-RPC methods:
 - `getTokenAccountsByOwner` - Get SPL token balances
 
 ### Removed Code
-- `_get_keypair_from_private_key()` - No longer needed (use `Keypair.from_base58_string()`)
+The following helper methods were removed from `axiomtradeapi/_client.py`:
+- `_get_keypair_from_private_key()` - No longer needed (use `Keypair.from_base58_string()` directly)
 - `_sign_and_send_transaction()` - No longer needed (inline PumpPortal flow)
+
+These methods were specific to the old Axiom API workflow and are not needed for the blockchain-direct approach.
 
 
 ## Verification
