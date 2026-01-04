@@ -1,12 +1,18 @@
+from __future__ import annotations
 import requests
 import json
 import base64
 import logging
-from typing import Dict, Optional, List, Union
+from typing import Dict, Optional, List, Union, TYPE_CHECKING
 from .auth.auth_manager import AuthManager, create_authenticated_session
 from .content.endpoints import Endpoints
 
 # Trading-related imports
+if TYPE_CHECKING:
+    from solders.keypair import Keypair
+    from solders.transaction import Transaction
+    from solders.pubkey import Pubkey
+
 try:
     from solders.keypair import Keypair
     from solders.transaction import Transaction
@@ -14,6 +20,9 @@ try:
     SOLDERS_AVAILABLE = True
 except ImportError:
     SOLDERS_AVAILABLE = False
+    Keypair = None
+    Transaction = None
+    Pubkey = None
 
 try:
     import base58
@@ -975,6 +984,22 @@ class AxiomTradeClient:
             error_msg = f"Error signing/sending transaction: {str(e)}"
             self.logger.error(error_msg)
             return {"success": False, "error": error_msg}
+    
+    # Backward compatibility aliases for old _client.py API
+    def GetBalance(self, wallet_address: str) -> Dict[str, Union[float, int]]:
+        """
+        Legacy method for backward compatibility. 
+        Use get_sol_balance() for new code.
+        """
+        balance_sol = self.get_sol_balance(wallet_address)
+        if balance_sol is not None:
+            lamports = int(balance_sol * 1_000_000_000)
+            return {
+                "sol": balance_sol,
+                "lamports": lamports,
+                "slot": 0  # Not available from this method
+            }
+        return None
 
 # Convenience functions for quick usage
 def quick_login_and_get_trending(email: str, b64_password: str, otp_code: str, time_period: str = '1h') -> Dict:
