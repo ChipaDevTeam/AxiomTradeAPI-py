@@ -318,8 +318,8 @@ class AuthManager:
             return False
     
     def _get_b64_password(self, password: str) -> str:
-        """Hash password with SHA256 and base64 encode using ISO-8859-1 encoding"""
-        sha256_hash = hashlib.sha256(password.encode('iso-8859-1')).digest()
+        """Hash password with SHA256 and base64 encode using UTF-8 encoding"""
+        sha256_hash = hashlib.sha256(password.encode('utf-8')).digest()
         b64_password = base64.b64encode(sha256_hash).decode('utf-8')
         return b64_password
     
