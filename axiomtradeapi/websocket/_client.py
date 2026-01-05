@@ -203,13 +203,21 @@ class AxiomTradeWebSocketClient:
                     
                     # Handle token price updates
                     for key, callback in self._callbacks.items():
-                        if key.startswith("token_price_") and data.get("content"):
-                            await callback(data.get("content"))
+                        if key.startswith("token_price_"):
+                            # Extract token from callback key
+                            token = key.replace("token_price_", "")
+                            # Check if room matches the token
+                            if data.get("room") == token and data.get("content"):
+                                await callback(data.get("content"))
                             
                     # Handle wallet transactions
                     for key, callback in self._callbacks.items():
-                        if key.startswith("wallet_transactions_") and data.get("content"):
-                            await callback(data.get("content"))
+                        if key.startswith("wallet_transactions_"):
+                            # Extract wallet address from callback key
+                            wallet_address = key.replace("wallet_transactions_", "")
+                            # Check if room matches the expected format for this wallet
+                            if data.get("room") == f"v:{wallet_address}" and data.get("content"):
+                                await callback(data.get("content"))
                     
                 except json.JSONDecodeError:
                     self.logger.error(f"Failed to parse WebSocket message: {message}")
