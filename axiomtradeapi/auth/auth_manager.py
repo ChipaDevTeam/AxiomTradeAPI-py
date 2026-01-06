@@ -318,10 +318,20 @@ class AuthManager:
             return False
     
     def _get_b64_password(self, password: str) -> str:
-        """Hash password with SHA256 and base64 encode using UTF-8 encoding"""
-        sha256_hash = hashlib.sha256(password.encode('utf-8')).digest()
-        b64_password = base64.b64encode(sha256_hash).decode('utf-8')
-        return b64_password
+        """Hashes a password using PBKDF2-HMAC-SHA256 and returns a Base64 string."""
+        SALT = bytes([
+            217, 3, 161, 123, 53, 200, 206, 36, 143, 2, 220, 252, 240, 109, 204, 23,
+            217, 174, 79, 158, 18, 76, 149, 117, 73, 40, 207, 77, 34, 194, 196, 163
+        ])
+        derived_key = hashlib.pbkdf2_hmac(
+            'sha256',
+            password.encode('utf-8'),
+            SALT,
+            600_000,
+            dklen=32
+        )
+
+        return base64.b64encode(derived_key).decode('ascii')
     
     def _login_step1(self) -> Optional[str]:
         """First step of login - send email and password to get OTP JWT token"""
