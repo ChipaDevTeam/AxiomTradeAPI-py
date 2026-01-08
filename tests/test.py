@@ -30,8 +30,6 @@ async def main():
             print("✓ Client authenticated with tokens from .env")
             balance = client.GetBalance("BJBgjyDZx5FSsyJf6bFKVXuJV7DZY9PCSMSi5d9tcEVh")
             print(f"Balance: {balance}")
-            result = client.buy_token(os.getenv("PRIVATE_KEY"), "8x5VqbHA8D7NkD52uNuS5nnt3PwA8pLD34ymskeSo2Wn", 0.012, 5)
-            print(result)
         else:
             print("✗ Authentication failed with provided tokens")
             
