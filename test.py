@@ -55,13 +55,6 @@ async def handle_new_pairs(data):
     }
     """
     try:
-        # DEBUG: Log the raw data to understand the structure
-        import json
-        logger.info("=" * 60)
-        logger.info("📦 RAW DATA STRUCTURE:")
-        logger.info(json.dumps(data, indent=2))
-        logger.info("=" * 60)
-        
         # Extract content from the message
         content = data.get('content', {})
         
@@ -70,40 +63,66 @@ async def handle_new_pairs(data):
         logger.info("🚨 NEW TOKEN PAIR DETECTED!")
         logger.info("=" * 60)
         
-        # Basic token information
-        token_name = content.get('tokenName', 'Unknown')
-        token_ticker = content.get('tokenTicker', 'N/A')
-        token_address = content.get('tokenAddress', 'N/A')
-        protocol = content.get('protocol', 'N/A')
+        # Basic token information (using correct field names from API)
+        token_name = content.get('token_name', 'Unknown')
+        token_ticker = content.get('token_ticker', 'N/A')
+        token_address = content.get('token_address', 'N/A')
+        protocol = content.get('protocol', content.get('display_protocol', 'N/A'))
+        pair_address = content.get('pair_address', 'N/A')
         
         logger.info(f"Token: {token_name} ({token_ticker})")
-        logger.info(f"Address: {token_address}")
+        logger.info(f"Token Address: {token_address}")
+        logger.info(f"Pair Address: {pair_address}")
         logger.info(f"Protocol: {protocol}")
         
-        # Market metrics
-        market_cap_sol = content.get('marketCapSol', 0)
-        volume_sol = content.get('volumeSol', 0)
-        liquidity_sol = content.get('liquiditySol', 0)
+        # Supply and liquidity information
+        supply = content.get('supply', 0)
+        initial_liquidity_sol = content.get('initial_liquidity_sol', 0)
+        initial_liquidity_token = content.get('initial_liquidity_token', 0)
         
-        logger.info(f"Market Cap: {market_cap_sol:.4f} SOL")
-        logger.info(f"Volume: {volume_sol:.4f} SOL")
-        logger.info(f"Liquidity: {liquidity_sol:.4f} SOL")
+        logger.info(f"Supply: {supply:,.0f}")
+        logger.info(f"Initial Liquidity: {initial_liquidity_sol:.2f} SOL / {initial_liquidity_token:,.0f} tokens")
+        
+        # Holder information
+        dev_holds_percent = content.get('dev_holds_percent', 0)
+        top_10_holders = content.get('top_10_holders', 0)
+        snipers_hold_percent = content.get('snipers_hold_percent', 0)
+        lp_burned = content.get('lp_burned', 0)
+        
+        logger.info(f"Dev Holds: {dev_holds_percent:.2f}%")
+        logger.info(f"Top 10 Holders: {top_10_holders:.2f}%")
+        logger.info(f"Snipers Hold: {snipers_hold_percent:.2f}%")
+        logger.info(f"LP Burned: {lp_burned}%")
         
         # Social links (if available)
         website = content.get('website')
         twitter = content.get('twitter')
         telegram = content.get('telegram')
+        discord = content.get('discord')
         
         if website:
-            logger.info(f"Website: {website}")
+            logger.info(f"🌐 Website: {website}")
         if twitter:
-            logger.info(f"Twitter: {twitter}")
+            logger.info(f"🐦 Twitter: {twitter}")
         if telegram:
-            logger.info(f"Telegram: {telegram}")
+            logger.info(f"💬 Telegram: {telegram}")
+        if discord:
+            logger.info(f"🎮 Discord: {discord}")
         
-        # Creation time
-        created_at = content.get('pairCreatedAt', 'N/A')
+        # Deployer and creation info
+        deployer_address = content.get('deployer_address', 'N/A')
+        created_at = content.get('created_at', 'N/A')
+        open_trading = content.get('open_trading', 'N/A')
+        
+        logger.info(f"Deployer: {deployer_address}")
         logger.info(f"Created: {created_at}")
+        logger.info(f"Trading Opened: {open_trading}")
+        
+        # Security information
+        mint_authority = content.get('mint_authority')
+        freeze_authority = content.get('freeze_authority')
+        logger.info(f"Mint Authority: {'None (Safe)' if mint_authority is None else mint_authority}")
+        logger.info(f"Freeze Authority: {'None (Safe)' if freeze_authority is None else freeze_authority}")
         
         logger.info("=" * 60)
         
