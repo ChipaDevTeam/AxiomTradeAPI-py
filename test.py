@@ -25,7 +25,7 @@ dotenv.load_dotenv(".env")
 
 # Configure logging to see detailed information
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -57,7 +57,10 @@ async def handle_new_pairs(data):
     try:
         # DEBUG: Log the raw data to understand the structure
         import json
-        logger.debug(f"Raw data received: {json.dumps(data, indent=2)}")
+        logger.info("=" * 60)
+        logger.info("📦 RAW DATA STRUCTURE:")
+        logger.info(json.dumps(data, indent=2))
+        logger.info("=" * 60)
         
         # Extract content from the message
         content = data.get('content', {})
