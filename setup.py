@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="axiomtradeapi",
-    version="1.0.4",
+    version="1.0.5",
     description="A comprehensive Python client for the AxiomTrade API with automatic token management, secure authentication, and extensive trading analytics for Solana meme tokens.",
     author="ChipaDevTeam",
     author_email="",
