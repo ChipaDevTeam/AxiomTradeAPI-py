@@ -213,10 +213,10 @@ async def main():
     
     finally:
         # Clean up WebSocket connection
-        if 'ws_client' in locals() and ws_client.ws:
+        if 'ws_client' in locals() and hasattr(ws_client, 'ws') and ws_client.ws:
             logger.info("Closing WebSocket connection...")
             await ws_client.close()
-        logger.info("✓ WebSocket closed")
+            logger.info("✓ WebSocket closed")
 
 
 if __name__ == "__main__":
