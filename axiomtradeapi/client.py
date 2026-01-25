@@ -8,6 +8,7 @@ from .auth.auth_manager import AuthManager, create_authenticated_session
 from .content.endpoints import Endpoints
 from .websocket._client import AxiomTradeWebSocketClient
 
+
 # Trading-related imports
 if TYPE_CHECKING:
     from solders.keypair import Keypair
@@ -805,9 +806,78 @@ class AxiomTradeClient:
             self.logger.error(f"Error getting token balance: {str(e)}")
             return None
     
+    def get_batched_sol_balance(self, wallet_addresses: List[str]) -> Dict[str, float]:
+        """
+        Get SOL balance for multiple wallet addresses using the batched endpoint.
+
+        Args:
+            wallet_addresses (List[str]): List of wallet public keys
+
+        Returns:
+            Dict[str, float]: Dictionary mapping wallet addresses to their SOL balance
+        """
+        try:
+            # Ensure we have valid authentication
+            if not self.ensure_authenticated():
+                raise ValueError("Authentication failed")
+
+            # Check if we have the batched endpoint defined
+            if not hasattr(self.endpoints, 'ENDPOINT_GET_BATCHED_BALANCE'):
+                 # Fallback if somehow using an older endpoints file, though we checked it exists
+                 endpoint = "/batched-sol-balance"
+            else:
+                 endpoint = self.endpoints.ENDPOINT_GET_BATCHED_BALANCE
+
+            url = f"{self.endpoints.BASE_URL_API}{endpoint}"
+            
+            payload = {
+                "publicKeys": wallet_addresses
+            }
+
+            self.logger.info(f"Fetching batched SOL balance for {len(wallet_addresses)} using {url}")
+            response = self.auth_manager.make_authenticated_request('POST', url, json=payload)
+
+            if response.status_code == 200:
+                data = response.json()
+                results = {}
+                
+                # Handle list response (based on user's test script finding)
+                if isinstance(data, list):
+                    # If we can't easily map, let's just return the raw data or try to map by index if count matches
+                    if len(data) == len(wallet_addresses):
+                         for i, item in enumerate(data):
+                             if isinstance(item, dict):
+                                 val = item.get('sol') or item.get('solBalance') or item.get('balance')
+                                 if val is not None:
+                                     results[wallet_addresses[i]] = float(val)
+                
+                elif isinstance(data, dict):
+                     # If it's a dict, it might be {address: {sol: ..., ...}} or {address: balance}
+                     for addr, val in data.items():
+                         if isinstance(val, dict):
+                             # Key could be 'sol', 'solBalance', 'balance'
+                             sol_val = val.get('sol') or val.get('solBalance') or val.get('balance')
+                             
+                             if sol_val is not None:
+                                 results[addr] = float(sol_val)
+                         elif isinstance(val, (int, float, str)):
+                             try:
+                                 results[addr] = float(val)
+                             except:
+                                 pass
+                
+                return results
+            else:
+                self.logger.error(f"Failed to get batched SOL balance: {response.status_code} - {response.text}")
+                return {}
+
+        except Exception as e:
+            self.logger.error(f"Error getting batched SOL balance: {str(e)}")
+            return {}
+
     def get_sol_balance(self, wallet_address: str) -> Optional[float]:
         """
-        Get SOL balance for a wallet address.
+        Get SOL balance for a wallet address using batched endpoint.
         
         Args:
             wallet_address (str): Wallet public key
@@ -816,23 +886,9 @@ class AxiomTradeClient:
             SOL balance as float, or None if error
         """
         try:
-            # Ensure we have valid authentication
-            if not self.ensure_authenticated():
-                raise ValueError("Authentication failed")
-            
-            payload = {"publicKey": wallet_address}
-            
-            url = f"{self.endpoints.BASE_URL_API}{self.endpoints.ENDPOINT_GET_BALANCE}"
-            response = self.auth_manager.make_authenticated_request('POST', url, json=payload)
-            
-            if response.status_code == 200:
-                result = response.json()
-                balance = result.get("balance", 0)
-                self.logger.info(f"SOL balance for {wallet_address}: {balance}")
-                return float(balance)
-            else:
-                self.logger.error(f"Failed to get SOL balance: {response.status_code}")
-                return None
+            # Internal call to batched version
+            results = self.get_batched_sol_balance([wallet_address])
+            return results.get(wallet_address)
                 
         except Exception as e:
             self.logger.error(f"Error getting SOL balance: {str(e)}")
