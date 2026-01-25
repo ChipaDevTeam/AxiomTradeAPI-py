@@ -3,6 +3,7 @@ import logging
 import websockets
 import asyncio
 from typing import Optional, Callable, Dict, Any
+import inspect
 
 class AxiomTradeWebSocketClient:    
     def __init__(self, auth_manager, log_level=logging.INFO) -> None:
@@ -28,23 +29,35 @@ class AxiomTradeWebSocketClient:
             self.logger.addHandler(handler)
         
         self._callbacks: Dict[str, Callable] = {}
+        
+        # Detect which parameter name to use for headers based on websockets.connect signature
+        sig = inspect.signature(websockets.connect)
+        self._uses_additional_headers = 'additional_headers' in sig.parameters
+        self._uses_extra_headers = 'extra_headers' in sig.parameters
+        
+        if self._uses_additional_headers:
+            self.logger.debug("Using 'additional_headers' parameter for websockets (version 13+)")
+        elif self._uses_extra_headers:
+            self.logger.debug("Using 'extra_headers' parameter for websockets (version 10.x)")
+        else:
+            self.logger.warning("Could not detect headers parameter name for websockets.connect")
 
     async def _connect_with_headers(self, url: str, headers: Dict[str, str]):
         """
         Connect to WebSocket with compatibility for different websockets versions.
-        Tries additional_headers first (websockets 13+), falls back to extra_headers (websockets 10.x).
+        Uses additional_headers (websockets 13+) or extra_headers (websockets 10.x) based on detection.
         """
-        try:
-            # Try with additional_headers first (websockets 13+)
+        if self._uses_additional_headers:
             return await websockets.connect(url, additional_headers=headers)
-        except TypeError as e:
-            # If TypeError, likely due to unexpected keyword argument, try extra_headers (websockets 10.x)
-            if "additional_headers" in str(e) or "unexpected keyword argument" in str(e):
-                self.logger.debug("Retrying connection with extra_headers parameter for websockets 10.x compatibility")
+        elif self._uses_extra_headers:
+            return await websockets.connect(url, extra_headers=headers)
+        else:
+            # Fallback: try both
+            try:
+                return await websockets.connect(url, additional_headers=headers)
+            except TypeError:
+                self.logger.debug("Fallback: Retrying connection with extra_headers parameter")
                 return await websockets.connect(url, extra_headers=headers)
-            else:
-                # Re-raise if it's a different TypeError
-                raise
 
     async def connect(self, is_token_price: bool = False) -> bool:
         """Connect to the WebSocket server."""

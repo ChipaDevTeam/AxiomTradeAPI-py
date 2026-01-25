@@ -49,9 +49,13 @@ class TestWebSocketCompatibility(unittest.TestCase):
         asyncio.run(run_test())
 
     def test_connect_fallback_to_extra_headers(self):
-        """Test that connection falls back to extra_headers when additional_headers raises TypeError."""
+        """Test that connection falls back to extra_headers when additional_headers is not available."""
         async def run_test():
             mock_ws = AsyncMock()
+            
+            # Mock the client to simulate websockets 10.x (only extra_headers available)
+            self.client._uses_additional_headers = False
+            self.client._uses_extra_headers = True
             
             async def mock_connect_impl(url, **kwargs):
                 # Simulate websockets 10.x behavior: reject additional_headers, accept extra_headers
@@ -124,6 +128,33 @@ class TestWebSocketCompatibility(unittest.TestCase):
                 self.assertEqual(mock_helper.call_count, 2)
                 self.assertTrue(result)
                 self.assertEqual(self.client.ws, mock_ws)
+        
+        asyncio.run(run_test())
+
+    def test_fallback_when_version_not_detected(self):
+        """Test that the fallback mechanism works when version detection fails."""
+        async def run_test():
+            mock_ws = AsyncMock()
+            
+            # Simulate version detection failure
+            self.client._uses_additional_headers = False
+            self.client._uses_extra_headers = False
+            
+            async def mock_connect_impl(url, **kwargs):
+                # First call with additional_headers fails, second with extra_headers succeeds
+                if 'additional_headers' in kwargs:
+                    raise TypeError("connect() got an unexpected keyword argument 'additional_headers'")
+                elif 'extra_headers' in kwargs:
+                    return mock_ws
+                else:
+                    raise ValueError("No headers provided")
+            
+            with patch('axiomtradeapi.websocket._client.websockets.connect', new=mock_connect_impl):
+                # Test the helper method
+                result = await self.client._connect_with_headers("wss://test.example.com", {"Test": "Header"})
+                
+                # Verify we got the mock websocket back (meaning fallback to extra_headers worked)
+                self.assertEqual(result, mock_ws)
         
         asyncio.run(run_test())
 
