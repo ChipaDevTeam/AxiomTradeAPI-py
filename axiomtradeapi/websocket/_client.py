@@ -6,7 +6,7 @@ from typing import Optional, Callable, Dict, Any
 
 class AxiomTradeWebSocketClient:    
     def __init__(self, auth_manager, log_level=logging.INFO) -> None:
-        self.ws_url = "wss://cluster-usc2.axiom.trade/"
+        self.ws_url = "wss://cluster6.axiom.trade/"
         self.ws_url_token_price = "wss://socket8.axiom.trade/"
         self.ws: Optional[websockets.WebSocketClientProtocol] = None
         
@@ -68,7 +68,7 @@ class AxiomTradeWebSocketClient:
             self.logger.info(f"Attempting to connect to WebSocket: {current_url}")
             self.ws = await websockets.connect(
                 current_url,
-                extra_headers=headers
+                additional_headers=headers
             )
             self.logger.info("Connected to WebSocket server")
             return True
@@ -87,7 +87,7 @@ class AxiomTradeWebSocketClient:
                         self.logger.info(f"Trying alternative WebSocket URL: {alternative_url}")
                         self.ws = await websockets.connect(
                             alternative_url,
-                            extra_headers=headers
+                            additional_headers=headers
                         )
                         self.logger.info("Connected to alternative WebSocket server")
                         return True
@@ -199,7 +199,10 @@ class AxiomTradeWebSocketClient:
                     
                     # Handle new token updates
                     if "new_pairs" in self._callbacks and data.get("room") == "new_pairs":
-                        await self._callbacks["new_pairs"](data)
+                        content = data.get("content")
+                        if content:
+                            # Wrap single token in array for callback compatibility
+                            await self._callbacks["new_pairs"]([content])
                     
                     # Handle token price updates
                     for key, callback in self._callbacks.items():
