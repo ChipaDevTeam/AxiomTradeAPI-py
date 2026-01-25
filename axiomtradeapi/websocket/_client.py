@@ -55,9 +55,17 @@ class AxiomTradeWebSocketClient:
             # Fallback: try both
             try:
                 return await websockets.connect(url, additional_headers=headers)
-            except TypeError:
-                self.logger.debug("Fallback: Retrying connection with extra_headers parameter")
-                return await websockets.connect(url, extra_headers=headers)
+            except TypeError as e1:
+                # Try extra_headers as fallback
+                try:
+                    self.logger.debug("Fallback: Retrying connection with extra_headers parameter")
+                    return await websockets.connect(url, extra_headers=headers)
+                except TypeError as e2:
+                    # Both failed - raise informative error
+                    raise TypeError(
+                        f"Failed to connect with both 'additional_headers' and 'extra_headers'. "
+                        f"Original error: {e1}. Fallback error: {e2}"
+                    ) from e1
 
     async def connect(self, is_token_price: bool = False) -> bool:
         """Connect to the WebSocket server."""
