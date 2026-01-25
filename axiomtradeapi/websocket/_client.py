@@ -29,6 +29,23 @@ class AxiomTradeWebSocketClient:
         
         self._callbacks: Dict[str, Callable] = {}
 
+    async def _connect_with_headers(self, url: str, headers: Dict[str, str]):
+        """
+        Connect to WebSocket with compatibility for different websockets versions.
+        Tries additional_headers first (websockets 13+), falls back to extra_headers (websockets 10.x).
+        """
+        try:
+            # Try with additional_headers first (websockets 13+)
+            return await websockets.connect(url, additional_headers=headers)
+        except TypeError as e:
+            # If TypeError, likely due to unexpected keyword argument, try extra_headers (websockets 10.x)
+            if "additional_headers" in str(e) or "unexpected keyword argument" in str(e):
+                self.logger.debug("Retrying connection with extra_headers parameter for websockets 10.x compatibility")
+                return await websockets.connect(url, extra_headers=headers)
+            else:
+                # Re-raise if it's a different TypeError
+                raise
+
     async def connect(self, is_token_price: bool = False) -> bool:
         """Connect to the WebSocket server."""
         # Ensure we have valid authentication
@@ -66,10 +83,7 @@ class AxiomTradeWebSocketClient:
             
             # Try the primary URL first
             self.logger.info(f"Attempting to connect to WebSocket: {current_url}")
-            self.ws = await websockets.connect(
-                current_url,
-                additional_headers=headers
-            )
+            self.ws = await self._connect_with_headers(current_url, headers)
             self.logger.info("Connected to WebSocket server")
             return True
         except Exception as e:
@@ -85,10 +99,7 @@ class AxiomTradeWebSocketClient:
                     try:
                         alternative_url = "wss://cluster3.axiom.trade/"
                         self.logger.info(f"Trying alternative WebSocket URL: {alternative_url}")
-                        self.ws = await websockets.connect(
-                            alternative_url,
-                            additional_headers=headers
-                        )
+                        self.ws = await self._connect_with_headers(alternative_url, headers)
                         self.logger.info("Connected to alternative WebSocket server")
                         return True
                     except Exception as e2:
