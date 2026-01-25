@@ -6,6 +6,7 @@ import logging
 from typing import Dict, Optional, List, Union, TYPE_CHECKING
 from .auth.auth_manager import AuthManager, create_authenticated_session
 from .content.endpoints import Endpoints
+from .websocket._client import AxiomTradeWebSocketClient
 
 # Trading-related imports
 if TYPE_CHECKING:
@@ -132,6 +133,18 @@ class AxiomTradeClient:
         
         return login_result
     
+    def get_websocket_client(self, log_level=logging.INFO) -> AxiomTradeWebSocketClient:
+        """
+        Get an instance of the WebSocket client using current authentication.
+        
+        Args:
+            log_level: Logging level for the WebSocket client
+            
+        Returns:
+            AxiomTradeWebSocketClient: Initialized WebSocket client
+        """
+        return AxiomTradeWebSocketClient(self.auth_manager, log_level=log_level)
+
     def set_tokens(self, access_token: str, refresh_token: str) -> None:
         """
         Set authentication tokens directly
