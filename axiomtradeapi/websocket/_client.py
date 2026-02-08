@@ -222,6 +222,44 @@ class AxiomTradeWebSocketClient:
             self.logger.error(f"Failed to subscribe to wallet transactions: {e}")
             return False
 
+    async def subscribe_active_users(self, callback: Callable[[int], None]):
+        """Subscribe to active Axiom users count updates.
+        
+        Args:
+            callback: Async function that receives the active user count as an integer
+            
+        Returns:
+            bool: True if subscription was successful, False otherwise
+            
+        Example:
+            async def handle_user_count(count: int):
+                print(f"Active users: {count}")
+            
+            await ws_client.subscribe_active_users(handle_user_count)
+            
+        Response format:
+        {
+            "room": "e-FFcYgSSgWHforA9rXXkA48p8YFoz8TSW85Jpo3CQHDyS",
+            "content": "49"
+        }
+        """
+        if not self.ws:
+            if not await self.connect():
+                return False
+
+        self._callbacks["active_users"] = callback
+        
+        try:
+            await self.ws.send(json.dumps({
+                "action": "join",
+                "room": "e-FFcYgSSgWHforA9rXXkA48p8YFoz8TSW85Jpo3CQHDyS"
+            }))
+            self.logger.info("Subscribed to active Axiom users updates")
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to subscribe to active users: {e}")
+            return False
+
     async def _message_handler(self):
         """Handle incoming WebSocket messages."""
         try:
@@ -235,6 +273,17 @@ class AxiomTradeWebSocketClient:
                         if content:
                             # Wrap single token in array for callback compatibility
                             await self._callbacks["new_pairs"]([content])
+                    
+                    # Handle active users updates
+                    if "active_users" in self._callbacks and data.get("room") == "e-FFcYgSSgWHforA9rXXkA48p8YFoz8TSW85Jpo3CQHDyS":
+                        content = data.get("content")
+                        if content is not None:
+                            # Convert string content to integer
+                            try:
+                                user_count = int(content)
+                                await self._callbacks["active_users"](user_count)
+                            except (ValueError, TypeError):
+                                self.logger.error(f"Failed to parse active users count: {content}")
                     
                     # Handle token price updates
                     for key, callback in self._callbacks.items():
