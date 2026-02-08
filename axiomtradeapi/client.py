@@ -424,6 +424,62 @@ class AxiomTradeClient:
         except Exception as e:
             raise Exception(f"Failed to get dev tokens: {e}")
     
+    async def get_active_axiom_users(self, callback=None, duration: int = None):
+        """
+        Subscribe to active Axiom users count updates via WebSocket.
+        
+        This method connects to the WebSocket and listens for active user count updates.
+        The count is updated in real-time as users connect/disconnect from Axiom.
+        
+        Args:
+            callback: Optional async function that receives the active user count as an integer.
+                     If not provided, prints the count to console.
+            duration: Optional duration in seconds to listen for updates. 
+                     If None, listens indefinitely until interrupted.
+        
+        Returns:
+            None - runs until interrupted or duration expires
+        
+        Example:
+            # Simple usage - prints to console
+            await client.get_active_axiom_users(duration=60)
+            
+            # Custom callback
+            async def handle_user_count(count: int):
+                print(f"Active users: {count}")
+                # Your custom logic here
+            
+            await client.get_active_axiom_users(callback=handle_user_count)
+        """
+        import asyncio
+        
+        # Ensure we have valid authentication
+        if not self.ensure_authenticated():
+            raise ValueError("Authentication failed. Please login first.")
+        
+        # Default callback that prints to console
+        if callback is None:
+            async def default_callback(count: int):
+                print(f"Active Axiom users: {count}")
+            callback = default_callback
+        
+        # Get websocket client
+        ws_client = self.get_websocket_client()
+        
+        # Subscribe to active users
+        await ws_client.subscribe_active_users(callback)
+        
+        # Start message handler
+        if duration:
+            # Run for specified duration
+            try:
+                await asyncio.wait_for(ws_client.start(), timeout=duration)
+            except asyncio.TimeoutError:
+                self.logger.info(f"Active users monitoring completed after {duration} seconds")
+        else:
+            # Run indefinitely
+            await ws_client.start()
+    
     def get_token_analysis(self, dev_address: str, token_ticker: str) -> Dict:
         """
         Get token analysis for a developer and token ticker
