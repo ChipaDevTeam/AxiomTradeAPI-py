@@ -5,6 +5,10 @@ Quick test script for the get_active_axiom_users method
 import asyncio
 import sys
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Add parent directory to path to import axiomtradeapi
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -19,25 +23,27 @@ async def test_active_users():
     print("Testing get_active_axiom_users method")
     print("=" * 60)
     
-    # Initialize client (it will use saved tokens if available)
-    client = AxiomTradeClient(use_saved_tokens=True)
+    # Get tokens from environment variables
+    access_token = os.getenv('AXIOM_ACCESS_TOKEN')
+    refresh_token = os.getenv('AXIOM_REFRESH_TOKEN')
+    
+    if access_token and refresh_token:
+        print("✅ Loading tokens from .env file")
+        client = AxiomTradeClient(
+            auth_token=access_token,
+            refresh_token=refresh_token
+        )
+    else:
+        print("⚠️  No tokens found in .env file, using saved tokens")
+        client = AxiomTradeClient(use_saved_tokens=True)
     
     # Check authentication
     if not client.is_authenticated():
-        print("\n⚠️  Not authenticated. Please provide credentials:")
-        username = input("Email: ").strip()
-        password = input("Password: ").strip()
-        
-        client = AxiomTradeClient(username=username, password=password)
-        result = client.login()
-        
-        if not result.get('success'):
-            print("❌ Login failed!")
-            return
-        
-        print("✅ Login successful!")
-    else:
-        print("✅ Using saved authentication tokens")
+        print("❌ Authentication failed!")
+        print("Please check your .env file has valid AXIOM_ACCESS_TOKEN and AXIOM_REFRESH_TOKEN")
+        return
+    
+    print("✅ Authenticated successfully")
     
     print("\n" + "=" * 60)
     print("Monitoring active Axiom users for 15 seconds...")
