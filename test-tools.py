@@ -2,6 +2,10 @@ from axiomtradeapi.client import AxiomTradeClient
 from axiomtradeapi.tools import login_with_email_otp
 from dotenv import load_dotenv
 import os
+import logging
+
+# Configure logging to see what's happening
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Load environment variables from .env file
 load_dotenv()

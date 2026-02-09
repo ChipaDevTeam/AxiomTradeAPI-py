@@ -81,9 +81,10 @@ class EmailOTPHandler:
                                 sender = self._decode_header_str(msg["From"])
                                 
                                 # Check matches
-                                if (not self.sender_filter or self.sender_filter.lower() in sender.lower()) and \
-                                   (not self.subject_filter or self.subject_filter.lower() in subject.lower()):
-                                   
+                                is_sender_match = not self.sender_filter or self.sender_filter.lower() in sender.lower()
+                                is_subject_match = not self.subject_filter or self.subject_filter.lower() in subject.lower()
+
+                                if is_sender_match and is_subject_match:
                                     self.logger.info(f"Found matching email: {subject} from {sender}")
                                     
                                     # Extract body
@@ -95,6 +96,10 @@ class EmailOTPHandler:
                                         mail.close()
                                         mail.logout()
                                         return otp
+                                else:
+                                    self.logger.info(f"Skipping email - Sender: '{sender}' (Match: {is_sender_match}), Subject: '{subject}' (Match: {is_subject_match})")
+                                    # If debugging, maybe we want to see what failed
+
                 
                 time.sleep(self.check_interval)
                 # Re-select inbox to refresh (some servers need this)
