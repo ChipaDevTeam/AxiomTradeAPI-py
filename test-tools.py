@@ -1,13 +1,19 @@
 from axiomtradeapi.client import AxiomTradeClient
 from axiomtradeapi.tools import login_with_email_otp
 
+import dotenv
+import os
+
+emails = os.getenv('EMAIL_ADDRESS')
+email_password = os.getenv('EMAIL_APP_PASSWORD')
+
 # 1. Setup client with your Axiom login
-client = AxiomTradeClient(email="myemail@gmail.com", password="my_axiom_password")
+client = AxiomTradeClient(email=emails, password=email_password)
 
 # 2. Login using the tool (provides the email app password to read the OTP)
 login_result = login_with_email_otp(
     client=client,
-    email_password="my_gmail_app_password",  # Provide your email App Password here
+    email_password=email_password,  # Provide your email App Password here
     imap_server="imap.gmail.com"             # Default is Gmail
 )
 
