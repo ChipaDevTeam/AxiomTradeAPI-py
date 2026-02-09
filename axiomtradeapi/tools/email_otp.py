@@ -13,8 +13,8 @@ class EmailOTPHandler:
     
     def __init__(self, email_address: str, email_password: str, 
                  imap_server: str = "imap.gmail.com", imap_port: int = 993,
-                 sender_filter: str = "support@axiom.trade", # Hypothetical sender
-                 subject_filter: str = "OTP",
+                 sender_filter: str = "axiom.trade", 
+                 subject_filter: str = "security code",
                  check_interval: float = 2.0,
                  timeout: float = 60.0):
         """
@@ -81,10 +81,9 @@ class EmailOTPHandler:
                                 sender = self._decode_header_str(msg["From"])
                                 
                                 # Check matches
-                                is_sender_match = not self.sender_filter or self.sender_filter.lower() in sender.lower()
-                                is_subject_match = not self.subject_filter or self.subject_filter.lower() in subject.lower()
-
-                                if is_sender_match and is_subject_match:
+                                if (not self.sender_filter or self.sender_filter.lower() in sender.lower()) and \
+                                   (not self.subject_filter or self.subject_filter.lower() in subject.lower()):
+                                   
                                     self.logger.info(f"Found matching email: {subject} from {sender}")
                                     
                                     # Extract body
@@ -96,9 +95,6 @@ class EmailOTPHandler:
                                         mail.close()
                                         mail.logout()
                                         return otp
-                                else:
-                                    self.logger.info(f"Skipping email - Sender: '{sender}' (Match: {is_sender_match}), Subject: '{subject}' (Match: {is_subject_match})")
-                                    # If debugging, maybe we want to see what failed
 
                 
                 time.sleep(self.check_interval)
