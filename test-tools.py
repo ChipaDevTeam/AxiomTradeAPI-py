@@ -11,7 +11,7 @@ load_dotenv()
 email = os.getenv('email') or os.getenv('EMAIL_ADDRESS')
 # Ideally different passwords, but falling back to check common vars
 axiom_password = os.getenv('EMAIL_APP_PASSWORD')
-email_app_password = os.getenv('EMAIL_APP_PASSWORD')
+email_app_password = os.getenv('EMAIL_PASSWORD')
 
 if not email:
     print("❌ Error: 'email' or 'EMAIL_ADDRESS' not found in environment variables.")
