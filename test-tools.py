@@ -10,7 +10,7 @@ load_dotenv()
 # Supports both 'email' (from existing .env) and 'EMAIL_ADDRESS' 
 email = os.getenv('email') or os.getenv('EMAIL_ADDRESS')
 # Ideally different passwords, but falling back to check common vars
-axiom_password = os.getenv('password') or os.getenv('AXIOM_PASSWORD')
+axiom_password = os.getenv('EMAIL_APP_PASSWORD')
 email_app_password = os.getenv('EMAIL_APP_PASSWORD')
 
 if not email:
