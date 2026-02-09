@@ -8,7 +8,7 @@ emails = os.getenv('EMAIL_ADDRESS')
 email_password = os.getenv('EMAIL_APP_PASSWORD')
 
 # 1. Setup client with your Axiom login
-client = AxiomTradeClient(email=emails, password=email_password)
+client = AxiomTradeClient(username=emails, password=email_password)
 
 # 2. Login using the tool (provides the email app password to read the OTP)
 login_result = login_with_email_otp(
