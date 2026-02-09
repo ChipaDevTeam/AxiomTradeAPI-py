@@ -93,13 +93,14 @@ class AxiomTradeClient:
         """Get current refresh token"""
         return self.auth_manager.tokens.refresh_token if self.auth_manager.tokens else None
     
-    def login(self, email: str = None, password: str = None) -> Dict:
+    def login(self, email: str = None, password: str = None, otp_callback=None) -> Dict:
         """
         Login with username and password using the enhanced auth flow
         
         Args:
             email: Email address (optional if provided in constructor)
             password: Password (optional if provided in constructor)
+            otp_callback: Optional function to retrieve OTP (e.g. from email tool)
             
         Returns:
             Dict: Login result with token information
@@ -116,7 +117,7 @@ class AxiomTradeClient:
         self.auth_manager.password = password
         
         # Perform authentication
-        success = self.auth_manager.authenticate()
+        success = self.auth_manager.authenticate(otp_callback=otp_callback)
         
         if success and self.auth_manager.tokens:
             return {

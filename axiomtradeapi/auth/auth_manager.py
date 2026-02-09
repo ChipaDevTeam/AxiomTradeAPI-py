@@ -285,9 +285,13 @@ class AuthManager:
         
         self.logger.info("Authentication tokens updated successfully")
     
-    def authenticate(self) -> bool:
+    def authenticate(self, otp_callback=None) -> bool:
         """
         Authenticate with username/password using Axiom's OTP login flow
+        
+        Args:
+            otp_callback: Optional function that returns the OTP code string. 
+                         If not provided, uses input() to ask user.
         
         Returns:
             bool: True if authentication successful, False otherwise
@@ -304,8 +308,13 @@ class AuthManager:
             if not otp_jwt_token:
                 return False
             
-            # Step 2: Get OTP code from user
-            otp_code = input("Enter the OTP code sent to your email: ")
+            # Step 2: Get OTP code
+            if otp_callback:
+                self.logger.info("Waiting for OTP from callback...")
+                otp_code = otp_callback()
+            else:
+                otp_code = input("Enter the OTP code sent to your email: ")
+                
             if not otp_code:
                 self.logger.error("OTP code is required")
                 return False
