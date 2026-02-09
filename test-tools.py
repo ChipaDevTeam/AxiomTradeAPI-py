@@ -35,8 +35,12 @@ if not email_app_password:
 
 print(f"🔄 Attempting login for: {email}")
 
+# Define storage directory in the root of the workspace
+storage_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".chipadev_data")
+print(f"📂 Using token storage: {storage_dir}")
+
 # 1. Setup client with your Axiom login
-client = AxiomTradeClient(username=email, password=axiom_password)
+client = AxiomTradeClient(username=email, password=axiom_password, storage_dir=storage_dir)
 
 # 2. Login using the tool
 # Note: axiom_password is for the trade site, email_app_password is for IMAP access
