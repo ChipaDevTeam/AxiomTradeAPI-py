@@ -1,0 +1,629 @@
+{
+  "showTx": true,
+  "showTax": false,
+  "xlButtons": false,
+  "showPnlRow": true,
+  "showVolume": true,
+  "solPresets": {
+    "preset1": {
+      "buy": {
+        "autoFee": false,
+        "slippage": "20",
+        "maxFeeSol": "0.1",
+        "bribeFeeSol": "0.01",
+        "customRpcUrl": "",
+        "mevProtection": false,
+        "priorityFeeSol": "0.001",
+        "enhancedMevProtection": false
+      },
+      "sell": {
+        "autoFee": false,
+        "slippage": "40",
+        "maxFeeSol": "0.1",
+        "bribeFeeSol": "0.01",
+        "customRpcUrl": "",
+        "mevProtection": false,
+        "priorityFeeSol": "0.001",
+        "enhancedMevProtection": false
+      }
+    },
+    "preset2": {
+      "buy": {
+        "autoFee": false,
+        "slippage": "20",
+        "maxFeeSol": "0.1",
+        "bribeFeeSol": "0.01",
+        "customRpcUrl": "",
+        "mevProtection": false,
+        "priorityFeeSol": "0.001",
+        "enhancedMevProtection": false
+      },
+      "sell": {
+        "autoFee": false,
+        "slippage": "40",
+        "maxFeeSol": "0.1",
+        "bribeFeeSol": "0.01",
+        "customRpcUrl": "",
+        "mevProtection": false,
+        "priorityFeeSol": "0.001",
+        "enhancedMevProtection": false
+      }
+    },
+    "preset3": {
+      "buy": {
+        "autoFee": false,
+        "slippage": "20",
+        "maxFeeSol": "0.1",
+        "bribeFeeSol": "0.01",
+        "customRpcUrl": "",
+        "mevProtection": false,
+        "priorityFeeSol": "0.001",
+        "enhancedMevProtection": false
+      },
+      "sell": {
+        "autoFee": false,
+        "slippage": "40",
+        "maxFeeSol": "0.1",
+        "bribeFeeSol": "0.01",
+        "customRpcUrl": "",
+        "mevProtection": false,
+        "priorityFeeSol": "0.001",
+        "enhancedMevProtection": false
+      }
+    }
+  },
+  "isMarketCap": true,
+  "showDexPaid": true,
+  "showHolders": true,
+  "showSnipers": true,
+  "showSocials": true,
+  "tablesIsSol": false,
+  "enabledYield": false,
+  "keyboardMode": false,
+  "pastSearches": [
+    "7Qw6VfupmeKioYj5y2JG3yERrH8dpstZ7eXWsVxVWpQT",
+    "6qy9dfEGNZRjJ5pUJtXwEc1u9ShZztuHQEJUjbgeNrm8",
+    "3osZ5rXzvMk1nB5fp5pjBN27Jp7qjT4QHNKrgPHSUGAR",
+    "8x5VqbHA8D7NkD52uNuS5nnt3PwA8pLD34ymskeSo2Wn"
+  ],
+  "primaryColor": "#526FFF",
+  "pulseFilters": {
+    "migrated": {
+      "age": {
+        "max": null,
+        "min": null,
+        "unit": "minutes"
+      },
+      "fees": {
+        "max": null,
+        "min": null
+      },
+      "txns": {
+        "max": null,
+        "min": null
+      },
+      "bundle": {
+        "max": null,
+        "min": null
+      },
+      "volume": {
+        "max": null,
+        "min": null
+      },
+      "dexPaid": false,
+      "holders": {
+        "max": null,
+        "min": null
+      },
+      "numBuys": {
+        "max": null,
+        "min": null
+      },
+      "snipers": {
+        "max": null,
+        "min": null
+      },
+      "twitter": {
+        "max": null,
+        "min": null
+      },
+      "website": false,
+      "botUsers": {
+        "max": null,
+        "min": null
+      },
+      "insiders": {
+        "max": null,
+        "min": null
+      },
+      "numSells": {
+        "max": null,
+        "min": null
+      },
+      "telegram": false,
+      "liquidity": {
+        "max": null,
+        "min": null
+      },
+      "marketCap": {
+        "max": null,
+        "min": null
+      },
+      "protocols": {
+        "bags": true,
+        "bonk": true,
+        "boop": true,
+        "pump": true,
+        "sugar": true,
+        "candle": true,
+        "heaven": true,
+        "daosFun": true,
+        "pumpAmm": false,
+        "raydium": false,
+        "moonshot": true,
+        "launchLab": true,
+        "meteoraAmm": false,
+        "launchACoin": true,
+        "moonshotApp": true,
+        "meteoraAmmV2": false,
+        "virtualCurve": true,
+        "jupiterStudio": true
+      },
+      "devHolding": {
+        "max": null,
+        "min": null
+      },
+      "isStreaming": false,
+      "numDevPairs": {
+        "max": null,
+        "min": null
+      },
+      "bondingCurve": {
+        "max": null,
+        "min": null
+      },
+      "top10Holders": {
+        "max": null,
+        "min": null
+      },
+      "tweetAgeMins": {
+        "max": null,
+        "min": null,
+        "unit": "minutes"
+      },
+      "mustEndInPump": false,
+      "numMigrations": {
+        "max": null,
+        "min": null
+      },
+      "twitterExists": false,
+      "searchKeywords": [],
+      "excludeKeywords": [],
+      "showQuoteTokens": {
+        "sol": true,
+        "usd1": true,
+        "usdc": true
+      },
+      "atLeastOneSocial": false,
+      "showPumpOffchain": true
+    },
+    "newPairs": {
+      "age": {
+        "max": null,
+        "min": null,
+        "unit": "minutes"
+      },
+      "fees": {
+        "max": null,
+        "min": null
+      },
+      "txns": {
+        "max": null,
+        "min": null
+      },
+      "bundle": {
+        "max": null,
+        "min": null
+      },
+      "volume": {
+        "max": null,
+        "min": null
+      },
+      "dexPaid": false,
+      "holders": {
+        "max": null,
+        "min": null
+      },
+      "numBuys": {
+        "max": null,
+        "min": null
+      },
+      "snipers": {
+        "max": null,
+        "min": null
+      },
+      "twitter": {
+        "max": null,
+        "min": null
+      },
+      "website": false,
+      "botUsers": {
+        "max": null,
+        "min": null
+      },
+      "insiders": {
+        "max": null,
+        "min": null
+      },
+      "numSells": {
+        "max": null,
+        "min": null
+      },
+      "telegram": false,
+      "liquidity": {
+        "max": null,
+        "min": null
+      },
+      "marketCap": {
+        "max": null,
+        "min": null
+      },
+      "protocols": {
+        "bags": true,
+        "bonk": true,
+        "boop": true,
+        "pump": true,
+        "sugar": true,
+        "candle": true,
+        "heaven": true,
+        "daosFun": true,
+        "pumpAmm": false,
+        "raydium": false,
+        "moonshot": true,
+        "launchLab": true,
+        "meteoraAmm": false,
+        "launchACoin": true,
+        "moonshotApp": true,
+        "meteoraAmmV2": false,
+        "virtualCurve": true,
+        "jupiterStudio": true
+      },
+      "devHolding": {
+        "max": null,
+        "min": null
+      },
+      "isStreaming": false,
+      "numDevPairs": {
+        "max": null,
+        "min": null
+      },
+      "bondingCurve": {
+        "max": null,
+        "min": null
+      },
+      "top10Holders": {
+        "max": null,
+        "min": null
+      },
+      "tweetAgeMins": {
+        "max": null,
+        "min": null,
+        "unit": "minutes"
+      },
+      "mustEndInPump": false,
+      "numMigrations": {
+        "max": null,
+        "min": null
+      },
+      "twitterExists": false,
+      "searchKeywords": [],
+      "excludeKeywords": [],
+      "showQuoteTokens": {
+        "sol": true,
+        "usd1": true,
+        "usdc": true
+      },
+      "atLeastOneSocial": false,
+      "showPumpOffchain": true
+    },
+    "finalStretch": {
+      "age": {
+        "max": null,
+        "min": null,
+        "unit": "minutes"
+      },
+      "fees": {
+        "max": null,
+        "min": null
+      },
+      "txns": {
+        "max": null,
+        "min": null
+      },
+      "bundle": {
+        "max": null,
+        "min": null
+      },
+      "volume": {
+        "max": null,
+        "min": null
+      },
+      "dexPaid": false,
+      "holders": {
+        "max": null,
+        "min": null
+      },
+      "numBuys": {
+        "max": null,
+        "min": null
+      },
+      "snipers": {
+        "max": null,
+        "min": null
+      },
+      "twitter": {
+        "max": null,
+        "min": null
+      },
+      "website": false,
+      "botUsers": {
+        "max": null,
+        "min": null
+      },
+      "insiders": {
+        "max": null,
+        "min": null
+      },
+      "numSells": {
+        "max": null,
+        "min": null
+      },
+      "telegram": false,
+      "liquidity": {
+        "max": null,
+        "min": null
+      },
+      "marketCap": {
+        "max": null,
+        "min": null
+      },
+      "protocols": {
+        "bags": true,
+        "bonk": true,
+        "boop": true,
+        "pump": true,
+        "sugar": true,
+        "candle": true,
+        "heaven": true,
+        "daosFun": true,
+        "pumpAmm": false,
+        "raydium": false,
+        "moonshot": true,
+        "launchLab": true,
+        "meteoraAmm": false,
+        "launchACoin": true,
+        "moonshotApp": true,
+        "meteoraAmmV2": false,
+        "virtualCurve": true,
+        "jupiterStudio": true
+      },
+      "devHolding": {
+        "max": null,
+        "min": null
+      },
+      "isStreaming": false,
+      "numDevPairs": {
+        "max": null,
+        "min": null
+      },
+      "bondingCurve": {
+        "max": null,
+        "min": null
+      },
+      "top10Holders": {
+        "max": null,
+        "min": null
+      },
+      "tweetAgeMins": {
+        "max": null,
+        "min": null,
+        "unit": "minutes"
+      },
+      "mustEndInPump": false,
+      "numMigrations": {
+        "max": null,
+        "min": null
+      },
+      "twitterExists": false,
+      "searchKeywords": [],
+      "excludeKeywords": [],
+      "showQuoteTokens": {
+        "sol": true,
+        "usd1": true,
+        "usdc": true
+      },
+      "atLeastOneSocial": false,
+      "showPumpOffchain": true
+    }
+  },
+  "showBundlers": true,
+  "showInsiders": true,
+  "showMyTrades": true,
+  "showOutliers": false,
+  "solQuickSets": [
+    "0.01",
+    "0.1",
+    "1",
+    "10",
+    ".25",
+    ".5",
+    "2",
+    "5"
+  ],
+  "activityIsSol": false,
+  "lastUpdatedAt": 1766380178865,
+  "pnlPanelIsSol": true,
+  "pulsePauseKey": " ",
+  "showDevTrades": true,
+  "showMarketCap": true,
+  "useBunnyProxy": false,
+  "positionsIsSol": false,
+  "showDevHolding": true,
+  "showProTraders": true,
+  "discoverFilters": {
+    "txns": {
+      "max": null,
+      "min": null
+    },
+    "volume": {
+      "max": null,
+      "min": null
+    },
+    "dexPaid": false,
+    "liquidity": {
+      "max": null,
+      "min": null
+    },
+    "marketCap": {
+      "max": null,
+      "min": null
+    },
+    "protocols": {
+      "bags": true,
+      "bonk": true,
+      "boop": true,
+      "orca": true,
+      "pump": true,
+      "sugar": true,
+      "candle": true,
+      "heaven": true,
+      "daosFun": true,
+      "pumpAmm": true,
+      "raydium": true,
+      "moonshot": true,
+      "launchLab": true,
+      "wavebreak": true,
+      "meteoraAmm": true,
+      "launchACoin": true,
+      "moonshotApp": true,
+      "meteoraAmmV2": true,
+      "virtualCurve": true,
+      "jupiterStudio": true
+    },
+    "devHoldings": {
+      "max": null,
+      "min": null
+    },
+    "holdersCount": {
+      "max": null,
+      "min": null
+    },
+    "top10Holders": {
+      "max": null,
+      "min": null
+    },
+    "insiderHolding": {
+      "max": null,
+      "min": null
+    },
+    "searchKeywords": [],
+    "excludeKeywords": [],
+    "proTradersCount": {
+      "max": null,
+      "min": null
+    },
+    "bundlersPercentage": {
+      "max": null,
+      "min": null
+    }
+  },
+  "hiddenPositions": [],
+  "secondPresetKey": "preset1",
+  "selectedCurrency": "USD",
+  "showDevCreations": true,
+  "showTop10Holders": true,
+  "solSellQuickSets": [
+    "0.01",
+    "0.1",
+    "1",
+    "10"
+  ],
+  "useCompactLayout": true,
+  "pulseQuickBuyKeys": {
+    "keys": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "0"
+    ],
+    "migratedModifierKey": "Alt",
+    "newPairsModifierKey": "Shift",
+    "finalStretchModifierKey": "Ctrl"
+  },
+  "quickBuySolAmount": "",
+  "showDevMigrations": true,
+  "showTrackedTrades": true,
+  "tradingStrategies": [],
+  "disableAutoRefresh": false,
+  "discoverTimePeriod": "24h",
+  "walletTrackerIsSol": true,
+  "currentSolPresetKey": "preset1",
+  "evmWalletsAndGroups": [
+    {
+      "type": "wallet",
+      "address": "0x3de0205861aa0bd7392dae238773374d07b18441"
+    }
+  ],
+  "experimentalWallets": false,
+  "percentageQuickSets": [
+    "10",
+    "25",
+    "50",
+    "100"
+  ],
+  "portfolioTimePeriod": "Max",
+  "showImageReuseCount": false,
+  "showWatchlistTicker": true,
+  "solWalletsAndGroups": [
+    {
+      "type": "wallet",
+      "address": "TBz4rsUXYNzpPiieiBotoBtDsCUirboKnVzFpjNMiTU"
+    }
+  ],
+  "translationsEnabled": true,
+  "useGapBetweenTables": false,
+  "watchlistTickerView": "watchlist",
+  "disableTradeWarnings": true,
+  "pulseKeybindsEnabled": true,
+  "useTradingStrategies": false,
+  "showHiddenPulseTokens": false,
+  "trackerPanelSplitSize": 70,
+  "transactionsFeedIsSol": false,
+  "translateAllLanguages": false,
+  "showTranslationOnHover": true,
+  "blacklistedDevAddresses": [],
+  "secondQuickBuySolAmount": "",
+  "hiddenPulseTokenAddresses": [],
+  "trackerPanelSplitDirection": "vertical",
+  "enabledTranslationLanguages": [
+    "zh-CN",
+    "zh-TW",
+    "ja",
+    "ko",
+    "vi",
+    "th",
+    "id",
+    "hi",
+    "iw",
+    "bn",
+    "fil",
+    "ta",
+    "te"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "signature": "bJsGUsRhPtCrP1gJpd8RF1jTk8Lo99fzftW8ktrozWrCRHM882f2W1NubeZKhhGpjthLX91Ut2ojC5k8A3N7Zhx",
+  "pairAddress": "8P5kBTzvG7xyjTZRzi4ftzpy6mnL74AHLtHDqyDq44ST",
+  "type": "sell",
+  "createdAt": "2026-02-10T15:56:15.962Z",
+  "liquiditySol": 30.000000003,
+  "liquidityToken": 1073000000,
+  "makerAddress": "DVDiUa47uEUYLaVTHfHAuBLf43gPBvok3JdyFPd7nEBZ",
+  "priceSol": 2.9180045018480917e-08,
+  "priceUsd": 2.4571056907811857e-06,
+  "tokenAmount": 44900147.006977,
+  "totalSol": 1.293810957,
+  "totalUsd": 108.945351634185,
+  "innerIndex": 0,
+  "outerIndex": 3,
+  "f": 0.000105
+}
