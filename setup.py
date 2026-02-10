@@ -22,6 +22,7 @@ setup(
     extras_require={
         "telegram": ["python-telegram-bot>=20.0"],
         "dev": ["pytest", "black", "flake8"],
+        "all-proxies": ["beautifulsoup4", "websockets-proxy>=0.1.0", "requests[socks]"],
     },
     include_package_data=True,
     license="MIT",

@@ -5,6 +5,12 @@ import asyncio
 from typing import Optional, Callable, Dict, Any
 import inspect
 
+try:
+    from websockets_proxy import proxy_connect
+    PROXY_SUPPORT = True
+except ImportError:
+    PROXY_SUPPORT = False
+    
 class AxiomTradeWebSocketClient:    
     def __init__(self, auth_manager, log_level=logging.INFO) -> None:
         self.ws_url = "wss://cluster6.axiom.trade/"

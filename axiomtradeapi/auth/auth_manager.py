@@ -214,7 +214,8 @@ class AuthManager:
     
     def __init__(self, username: str = None, password: str = None, 
                  auth_token: str = None, refresh_token: str = None,
-                 storage_dir: str = None, use_saved_tokens: bool = True):
+                 storage_dir: str = None, use_saved_tokens: bool = True,
+                 proxies: Dict[str, str] = None):
         """
         Initialize AuthManager
         
@@ -225,11 +226,13 @@ class AuthManager:
             refresh_token: Existing refresh token (optional)
             storage_dir: Directory for secure token storage
             use_saved_tokens: Whether to load saved tokens (default: True)
+            proxies: Dictionary mapping protocol to proxy URL (e.g. {'https': 'http://10.10.1.10:3128'})
         """
         self.username = username
         self.password = password
         self.base_url = "https://axiom.trade"
         self.use_saved_tokens = use_saved_tokens
+        self.proxies = proxies
         
         # Setup logging
         self.logger = logging.getLogger(__name__)
@@ -695,6 +698,11 @@ class AuthManager:
         
         # Make the request
         self.logger.debug(f"Making authenticated {method} request to {url}")
+        
+        # Add proxies if configured
+        if self.proxies and 'proxies' not in kwargs:
+            kwargs['proxies'] = self.proxies
+            
         response = requests.request(method, url, headers=authenticated_headers, **kwargs)
         
         return response
