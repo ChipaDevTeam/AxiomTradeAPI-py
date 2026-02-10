@@ -428,7 +428,7 @@ class AxiomTradeClient:
         except Exception as e:
             raise Exception(f"Failed to get dev tokens: {e}")
     
-    async def get_active_axiom_users(self, callback=None, duration: int = None):
+    async def get_active_axiom_users(self, callback=None, duration: int = None, token_address: str = "FFcYgSSgWHforA9rXXkA48p8YFoz8TSW85Jpo3CQHDyS"):
         """
         Subscribe to active Axiom users count updates via WebSocket.
         
@@ -440,6 +440,7 @@ class AxiomTradeClient:
                      If not provided, prints the count to console.
             duration: Optional duration in seconds to listen for updates. 
                      If None, listens indefinitely until interrupted.
+            token_address: The token address to track active users for (default is Axiom token)
         
         Returns:
             None - runs until interrupted or duration expires
@@ -471,7 +472,7 @@ class AxiomTradeClient:
         ws_client = self.get_websocket_client()
         
         # Subscribe to active users
-        await ws_client.subscribe_active_users(callback)
+        await ws_client.subscribe_active_users(callback, token_address=token_address)
         
         # Start message handler
         if duration:
