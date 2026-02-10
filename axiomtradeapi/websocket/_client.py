@@ -317,6 +317,11 @@ class AxiomTradeWebSocketClient:
                     for key, callback in self._callbacks.items():
                         if key.startswith("active_users_"):
                             token_addr = key.replace("active_users_", "")
+                            
+                            # Log all messages related to this token for debugging
+                            if token_addr in str(data.get("room", "")):
+                                self.logger.info(f"WebSocket msg for {token_addr}: room={data.get('room')} content={data.get('content')}")
+                            
                             if data.get("room") == f"e-{token_addr}":
                                 content = data.get("content")
                                 if content is not None:
@@ -326,6 +331,11 @@ class AxiomTradeWebSocketClient:
                                         await callback(user_count)
                                     except (ValueError, TypeError):
                                         self.logger.error(f"Failed to parse active users count: {content}")
+                            elif data.get("room") == f"s:{token_addr}":
+                                # Try parsing active users from stats channel if usually there
+                                content = data.get("content")
+                                if isinstance(content, dict) and "active_users" in content:
+                                     await callback(int(content["active_users"]))
                     
                     # Handle token price updates
                     for key, callback in self._callbacks.items():
