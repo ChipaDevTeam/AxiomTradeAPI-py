@@ -488,13 +488,14 @@ class AxiomTradeClient:
             # Run indefinitely
             await ws_client.start()
     
-    def connect(self, sol_public_keys: List[str] = None, evm_public_keys: List[str] = None):
+    def connect(self, sol_public_keys: List[str] = None, evm_public_keys: List[str] = None, token_address: str = None):
         """
         Simulates the full browser connection sequence and saves session data.
         
         Args:
             sol_public_keys: List of Solana public keys to check balances for
             evm_public_keys: List of EVM public keys to check balances for
+            token_address: Optional token address if simulating landing on a specific token page
         """
         data_dir = ".chipadev_data"
         if not os.path.exists(data_dir):
@@ -512,7 +513,7 @@ class AxiomTradeClient:
             dd_trace_id = str(int(trace_id[-16:], 16)) # Last 64 bits as decimal for Datadog
             dd_parent_id = str(int(parent_id, 16))
             
-            return {
+            headers = {
                 "accept": "application/json, text/plain, */*",
                 "accept-language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
                 "content-type": "application/json",
@@ -533,6 +534,7 @@ class AxiomTradeClient:
                 "x-datadog-sampling-priority": "1",
                 "x-datadog-trace-id": dd_trace_id
             }
+            return headers
 
         def save_response(name, data):
             try:
@@ -546,6 +548,19 @@ class AxiomTradeClient:
         sol_keys = sol_public_keys or []
         evm_keys = evm_public_keys or []
         
+        # Helper to extract User ID from JWT if possible
+        user_id = None
+        try:
+            # Very basic JWT decode to get payload
+            token_parts = self.auth_manager.access_token.split('.')
+            if len(token_parts) >= 2:
+                payload = json.loads(base64.b64decode(token_parts[1] + "==").decode('utf-8'))
+                user_id = payload.get('authenticatedUserId')
+        except Exception:
+            pass
+
+        # --- 1. Core Initialization Requests ---
+
         # 1. Batched SOL Balance
         try:
             url = "https://api.axiom.trade/batched-sol-balance"
@@ -605,19 +620,33 @@ class AxiomTradeClient:
         except Exception as e:
             self.logger.error(f"Error in bundle-key-and-wallets: {e}")
 
-        # 7. Hyperliquid Info (if EVM keys present)
+        # 7. Hyperliquid Info (EVM keys)
         for key in evm_keys:
+            # Request 1: clearinghouseState
             try:
                 url = "https://api.hyperliquid.xyz/info"
                 payload = {"user": key, "type": "clearinghouseState"}
                 headers = make_headers()
                 headers["Sec-Fetch-Site"] = "cross-site"
-                headers["Origin"] = "https://axiom.trade" # Important for CORS
+                headers["Origin"] = "https://axiom.trade"
                 resp = requests.post(url, json=payload, headers=headers) 
                 if resp.status_code == 200:
-                    save_response(f"hyperliquid_{key}", resp.json())
+                    save_response(f"hyperliquid_clearinghouse_{key}", resp.json())
             except Exception as e:
-                self.logger.error(f"Error in hyperliquid info: {e}")
+                self.logger.error(f"Error in hyperliquid clearinghouse info: {e}")
+            
+            # Request 2: userRole
+            try:
+                url = "https://api.hyperliquid.xyz/info"
+                payload = {"user": key, "type": "userRole"}
+                headers = make_headers()
+                headers["Sec-Fetch-Site"] = "cross-site"
+                headers["Origin"] = "https://axiom.trade"
+                resp = requests.post(url, json=payload, headers=headers) 
+                if resp.status_code == 200:
+                    save_response(f"hyperliquid_userrole_{key}", resp.json())
+            except Exception as e:
+                self.logger.error(f"Error in hyperliquid userRole info: {e}")
 
         # 8. User Nonce Accounts
         try:
@@ -637,6 +666,135 @@ class AxiomTradeClient:
                 save_response("server_time", resp.json())
         except Exception as e:
             self.logger.error(f"Error in server-time: {e}")
+
+        # 10. Batched BNB Nonces (EVM keys)
+        try:
+            url = "https://api.axiom.trade/batched-bnb-nonces"
+            payload = {"publicKeys": evm_keys, "v": get_timestamp()}
+            resp = self.session.post(url, json=payload, headers=make_headers())
+            if resp.status_code == 200:
+                save_response("bnb_nonces", resp.json())
+        except Exception as e:
+            self.logger.error(f"Error in batched-bnb-nonces: {e}")
+
+        # 11. Tracked Wallets V2 (BNB)
+        if user_id:
+            try:
+                url = f"https://api2-bnb.axiom.trade/tracked-wallets-v2?userId={user_id}"
+                resp = self.session.get(url, headers=make_headers())
+                if resp.status_code == 200:
+                    save_response("tracked_wallets_v2_bnb", resp.json())
+            except Exception as e:
+                self.logger.error(f"Error in tracked-wallets-v2: {e}")
+
+        # 12. Tracked Wallet Transactions V3
+        try:
+            url = "https://api3.axiom.trade/tracked-wallet-transactions-v3"
+            payload = {
+                "detailedTypes": ["Buy More", "First Buy", "Sell Partial", "Sell All", "Add Liquidity", "Remove Liquidity", "Unknown"],
+                "tokenMinsAgoCreated": {"min": None, "max": None},
+                "marketCap": {"min": None, "max": None},
+                "totalSol": {"min": None, "max": None},
+                "v": get_timestamp()
+            }
+            resp = self.session.post(url, json=payload, headers=make_headers())
+            if resp.status_code == 200:
+                save_response("tracked_wallet_tx_v3", resp.json())
+        except Exception as e:
+            self.logger.error(f"Error in tracked-wallet-transactions-v3: {e}")
+
+        # 13. Tracked Wallet Transactions V2 (BNB)
+        if user_id:
+            try:
+                url = "https://api2-bnb.axiom.trade/tracked-wallet-transactions-v2"
+                payload = {
+                    "detailedTypes": ["Buy More", "First Buy", "Sell Partial", "Sell All", "Add Liquidity", "Remove Liquidity", "Unknown"],
+                    "tokenMinsAgoCreated": {"min": None, "max": None},
+                    "marketCap": {"min": None, "max": None},
+                    "totalBnb": {"min": None, "max": None},
+                    "userId": user_id
+                }
+                resp = self.session.post(url, json=payload, headers=make_headers())
+                if resp.status_code == 200:
+                    save_response("tracked_wallet_tx_v2_bnb", resp.json())
+            except Exception as e:
+                self.logger.error(f"Error in tracked-wallet-transactions-v2: {e}")
+
+        # 14. Miscellaneous External Pings and Status
+        try:
+             # Friends Status
+            resp = self.session.get(f"https://friends.axiom.trade/user-friends-with-status?v={get_timestamp()%10}", headers=make_headers())
+            save_response("friends_status", resp.json() if resp.status_code==200 else {})
+            
+            # Alerts
+            resp = self.session.get(f"https://api3.axiom.trade/get-alerts?v={get_timestamp()}", headers=make_headers())
+            save_response("alerts", resp.json() if resp.status_code==200 else {})
+            
+            # Coin Prices
+            resp = self.session.get(f"https://api.axiom.trade/coin-prices?v={get_timestamp()}", headers=make_headers())
+            save_response("coin_prices", resp.json() if resp.status_code==200 else {})
+             
+            # Watchlist
+            resp = self.session.get(f"https://api3.axiom.trade/watchlist-v2?v={get_timestamp()}", headers=make_headers())
+            save_response("watchlist", resp.json() if resp.status_code==200 else {})
+            
+            # Announcements
+            resp = self.session.get(f"https://api3.axiom.trade/get-announcement?v={get_timestamp()}", headers=make_headers())
+            save_response("announcements", resp.json() if resp.status_code==200 else {})
+
+            # Settings
+            resp = self.session.get(f"https://api3.axiom.trade/get-settings?v={get_timestamp()}", headers=make_headers())
+            save_response("settings", resp.json() if resp.status_code==200 else {})
+
+            # Lighthouse
+            resp = self.session.get(f"https://api3.axiom.trade/lighthouse?v={get_timestamp()}", headers=make_headers())
+            save_response("lighthouse", resp.json() if resp.status_code==200 else {})
+
+            # Online Users
+            resp = self.session.get(f"https://api3.axiom.trade/online-users-count?v={get_timestamp()}", headers=make_headers())
+            save_response("online_users", resp.json() if resp.status_code==200 else {})
+            
+            # Friends Lobby
+            resp = self.session.get(f"https://friends.axiom.trade/lobby?v={get_timestamp()%10}", headers=make_headers())
+            save_response("friends_lobby", resp.json() if resp.status_code==200 else {})
+            
+            # Meme Open Positions (for each SOL key)
+            for key in sol_keys:
+                resp = self.session.get(f"https://api3.axiom.trade/meme-open-positions-v2?walletAddress={key}&v={get_timestamp()}", headers=make_headers())
+                if resp.status_code == 200:
+                    save_response(f"meme_positions_{key}", resp.json())
+                    
+        except Exception as e:
+            self.logger.error(f"Error in Misc Requests: {e}")
+
+        # --- 2. Token Specific Requests (if token_address provided) ---
+        if token_address:
+            try:
+                # Top Traders
+                resp = self.session.get(f"https://api3.axiom.trade/top-traders-v4?pairAddress={token_address}&onlyTrackedWallets=false&v={get_timestamp()}", headers=make_headers())
+                save_response(f"top_traders_{token_address}", resp.json() if resp.status_code==200 else {})
+                
+                # Token Info
+                resp = self.session.get(f"https://api3.axiom.trade/token-info?pairAddress={token_address}&v={get_timestamp()}", headers=make_headers())
+                save_response(f"token_info_{token_address}", resp.json() if resp.status_code==200 else {})
+
+                # Last Transaction
+                resp = self.session.get(f"https://api3.axiom.trade/last-transaction?pairAddress={token_address}&v={get_timestamp()}", headers=make_headers())
+                save_response(f"last_tx_{token_address}", resp.json() if resp.status_code==200 else {})
+                
+                # Pair Stats
+                resp = self.session.get(f"https://api3.axiom.trade/pair-stats?pairAddress={token_address}&v={get_timestamp()}", headers=make_headers())
+                save_response(f"pair_stats_{token_address}", resp.json() if resp.status_code==200 else {})
+                
+                # Holder Data
+                resp = self.session.get(f"https://api3.axiom.trade/holder-data-v4?pairAddress={token_address}&v={get_timestamp()}", headers=make_headers())
+                save_response(f"holder_data_{token_address}", resp.json() if resp.status_code==200 else {})
+                
+                # Pair Info
+                resp = self.session.get(f"https://api3.axiom.trade/pair-info?pairAddress={token_address}&v={get_timestamp()}", headers=make_headers())
+                save_response(f"pair_info_{token_address}", resp.json() if resp.status_code==200 else {})
+            except Exception as e:
+                self.logger.error(f"Error in token specific requests for {token_address}: {e}")
 
         self.logger.info("Connect sequence completed.")
     def get_token_analysis(self, dev_address: str, token_ticker: str) -> Dict:
