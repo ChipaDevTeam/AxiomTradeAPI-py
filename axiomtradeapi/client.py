@@ -39,7 +39,8 @@ class AxiomTradeClient:
     
     def __init__(self, username: str = None, password: str = None, 
                  auth_token: str = None, refresh_token: str = None,
-                 storage_dir: str = None, use_saved_tokens: bool = True):
+                 storage_dir: str = None, use_saved_tokens: bool = True,
+                 proxies: Dict[str, str] = None):
         """
         Initialize AxiomTradeClient with enhanced authentication
         
@@ -50,6 +51,7 @@ class AxiomTradeClient:
             refresh_token: Existing refresh token (optional)
             storage_dir: Directory for secure token storage
             use_saved_tokens: Whether to load/save tokens automatically (default: True)
+            proxies: Dictionary mapping protocol to proxy URL (optional)
         """
         # Initialize the enhanced auth manager
         self.auth_manager = AuthManager(
@@ -58,7 +60,8 @@ class AxiomTradeClient:
             auth_token=auth_token,
             refresh_token=refresh_token,
             storage_dir=storage_dir,
-            use_saved_tokens=use_saved_tokens
+            use_saved_tokens=use_saved_tokens,
+            proxies=proxies
         )
         
         # Initialize endpoints for trading functionality

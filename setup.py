@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="axiomtradeapi",
-    version="1.0.6",
+    version="1.0.8",
     description="A comprehensive Python client for the AxiomTrade API with automatic token management, secure authentication, and extensive trading analytics for Solana meme tokens.",
     author="ChipaDevTeam",
     author_email="",
@@ -22,6 +22,7 @@ setup(
     extras_require={
         "telegram": ["python-telegram-bot>=20.0"],
         "dev": ["pytest", "black", "flake8"],
+        "all-proxies": ["beautifulsoup4", "websockets-proxy>=0.1.0", "requests[socks]"],
     },
     include_package_data=True,
     license="MIT",

@@ -5,6 +5,12 @@ import asyncio
 from typing import Optional, Callable, Dict, Any
 import inspect
 
+try:
+    from websockets_proxy import proxy_connect
+    PROXY_SUPPORT = True
+except ImportError:
+    PROXY_SUPPORT = False
+    
 class AxiomTradeWebSocketClient:    
     def __init__(self, auth_manager, log_level=logging.INFO) -> None:
         self.ws_url = "wss://cluster6.axiom.trade/"
@@ -47,19 +53,36 @@ class AxiomTradeWebSocketClient:
         Connect to WebSocket with compatibility for different websockets versions.
         Uses additional_headers (websockets 13+) or extra_headers (websockets 10.x) based on detection.
         """
+        # Check for proxy configuration
+        proxy_url = None
+        if hasattr(self.auth_manager, 'proxies') and self.auth_manager.proxies:
+            # Valid proxies dict usually maps protocol to url. For WS, we usually use the HTTP/HTTPS proxy.
+            proxy_url = self.auth_manager.proxies.get('https') or self.auth_manager.proxies.get('http')
+            
+        connect_func = websockets.connect
+        kwargs = {}
+        
+        if proxy_url:
+            if PROXY_SUPPORT:
+                self.logger.debug(f"Connecting via proxy: {proxy_url}")
+                connect_func = proxy_connect
+                kwargs['proxy'] = proxy_url
+            else:
+                self.logger.warning("Proxy configured but websockets-proxy not installed. Connecting directly. Install with 'pip install axiomtradeapi[all-proxies]'")
+
         if self._uses_additional_headers:
-            return await websockets.connect(url, additional_headers=headers)
+            return await connect_func(url, additional_headers=headers, **kwargs)
         elif self._uses_extra_headers:
-            return await websockets.connect(url, extra_headers=headers)
+            return await connect_func(url, extra_headers=headers, **kwargs)
         else:
             # Fallback: try both
             try:
-                return await websockets.connect(url, additional_headers=headers)
+                return await connect_func(url, additional_headers=headers, **kwargs)
             except TypeError as e1:
                 # Try extra_headers as fallback
                 try:
                     self.logger.debug("Fallback: Retrying connection with extra_headers parameter")
-                    return await websockets.connect(url, extra_headers=headers)
+                    return await connect_func(url, extra_headers=headers, **kwargs)
                 except TypeError as e2:
                     # Both failed - raise informative error
                     raise TypeError(
