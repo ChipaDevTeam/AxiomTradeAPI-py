@@ -378,7 +378,7 @@ class AuthManager:
         
         try:
             self.logger.debug(f"Sending login step 1 request for email: {self.username}")
-            response = requests.post(url, headers=headers, json=data, timeout=30)
+            response = requests.post(url, headers=headers, json=data, timeout=30, proxies=self.proxies)
             
             if response.status_code == 200:
                 otp_token = response.cookies.get('auth-otp-login-token')
@@ -429,7 +429,7 @@ class AuthManager:
         
         try:
             self.logger.debug("Sending login step 2 request with OTP code")
-            response = requests.post(url, headers=headers, json=data, timeout=30)
+            response = requests.post(url, headers=headers, json=data, timeout=30, proxies=self.proxies)
             
             if response.status_code == 200:
                 # Extract tokens from response cookies
@@ -507,7 +507,8 @@ class AuthManager:
                 refresh_url,
                 headers=headers,
                 cookies=cookies,
-                timeout=30
+                timeout=30,
+                proxies=self.proxies
             )
             
             if response.status_code == 200:
