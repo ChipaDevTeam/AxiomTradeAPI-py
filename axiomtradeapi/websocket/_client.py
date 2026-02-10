@@ -245,11 +245,12 @@ class AxiomTradeWebSocketClient:
             self.logger.error(f"Failed to subscribe to wallet transactions: {e}")
             return False
 
-    async def subscribe_active_users(self, callback: Callable[[int], None]):
-        """Subscribe to active Axiom users count updates.
+    async def subscribe_active_users(self, callback: Callable[[int], None], token_address: str = "FFcYgSSgWHforA9rXXkA48p8YFoz8TSW85Jpo3CQHDyS"):
+        """Subscribe to active Axiom users count updates for a specific token.
         
         Args:
             callback: Async function that receives the active user count as an integer
+            token_address: The token address to track active users for (default is Axiom token)
             
         Returns:
             bool: True if subscription was successful, False otherwise
@@ -262,7 +263,7 @@ class AxiomTradeWebSocketClient:
             
         Response format:
         {
-            "room": "e-FFcYgSSgWHforA9rXXkA48p8YFoz8TSW85Jpo3CQHDyS",
+            "room": "e-<TOKEN_ADDRESS>",
             "content": "49"
         }
         """
@@ -270,14 +271,14 @@ class AxiomTradeWebSocketClient:
             if not await self.connect():
                 return False
 
-        self._callbacks["active_users"] = callback
+        self._callbacks[f"active_users_{token_address}"] = callback
         
         try:
             await self.ws.send(json.dumps({
                 "action": "join",
-                "room": "e-FFcYgSSgWHforA9rXXkA48p8YFoz8TSW85Jpo3CQHDyS"
+                "room": f"e-{token_address}"
             }))
-            self.logger.info("Subscribed to active Axiom users updates")
+            self.logger.info(f"Subscribed to active users updates for token {token_address}")
             return True
         except Exception as e:
             self.logger.error(f"Failed to subscribe to active users: {e}")
@@ -298,15 +299,18 @@ class AxiomTradeWebSocketClient:
                             await self._callbacks["new_pairs"]([content])
                     
                     # Handle active users updates
-                    if "active_users" in self._callbacks and data.get("room") == "e-FFcYgSSgWHforA9rXXkA48p8YFoz8TSW85Jpo3CQHDyS":
-                        content = data.get("content")
-                        if content is not None:
-                            # Convert string content to integer
-                            try:
-                                user_count = int(content)
-                                await self._callbacks["active_users"](user_count)
-                            except (ValueError, TypeError):
-                                self.logger.error(f"Failed to parse active users count: {content}")
+                    for key, callback in self._callbacks.items():
+                        if key.startswith("active_users_"):
+                            token_addr = key.replace("active_users_", "")
+                            if data.get("room") == f"e-{token_addr}":
+                                content = data.get("content")
+                                if content is not None:
+                                    # Convert string content to integer
+                                    try:
+                                        user_count = int(content)
+                                        await callback(user_count)
+                                    except (ValueError, TypeError):
+                                        self.logger.error(f"Failed to parse active users count: {content}")
                     
                     # Handle token price updates
                     for key, callback in self._callbacks.items():
