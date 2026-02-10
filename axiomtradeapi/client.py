@@ -76,6 +76,11 @@ class AxiomTradeClient:
         # Setup logging
         self.logger = logging.getLogger(__name__)
         
+        # Initialize session for HTTP requests
+        self.session = requests.Session()
+        if proxies:
+            self.session.proxies.update(proxies)
+        
         self.base_headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
             'Accept': 'application/json, text/plain, */*',
@@ -88,6 +93,12 @@ class AxiomTradeClient:
             'sec-fetch-mode': 'cors',
             'sec-fetch-site': 'same-site'
         }
+        self.session.headers.update(self.base_headers)
+
+        # Sync session with auth manager if tokens exist
+        if self.auth_manager.tokens:
+            self.session.cookies.set('auth-access-token', self.auth_manager.tokens.access_token)
+            self.session.cookies.set('auth-refresh-token', self.auth_manager.tokens.refresh_token)
     
     @property
     def access_token(self) -> Optional[str]:
