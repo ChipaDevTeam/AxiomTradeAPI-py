@@ -49,51 +49,51 @@ python -c "from axiomtradeapi import AxiomTradeClient; print('✅ Installation s
 
 ### Basic Usage
 
-#### New Token-Based Authentication (Recommended)
-
-```python
-from axiomtradeapi import AxiomTradeClient
-
-# Initialize client (no credentials required in constructor)
-client = AxiomTradeClient()
-
-# Method 1: Login to get tokens
-tokens = client.login(
-    email="your_email@example.com",
-    b64_password="your_base64_encoded_password", 
-    otp_code="123456"  # OTP from email
-)
-
-print(f"Access Token: {tokens['access_token']}")
-print(f"Refresh Token: {tokens['refresh_token']}")
-
-# Method 2: Use existing tokens
-client.set_tokens(
-    access_token="your_access_token_here",
-    refresh_token="your_refresh_token_here"
-)
-
-# Use the API
-if client.is_authenticated():
-    trending = client.get_trending_tokens('1h')
-    print(f"Found {len(trending.get('tokens', []))} trending tokens")
-```
-
-#### Environment Variables (Production)
+#### 1. Automatic Authentication (Recommended)
+This method automatically handles login, saves your session securely, and resumes it on future runs.
 
 ```python
 import os
 from axiomtradeapi import AxiomTradeClient
+from dotenv import load_dotenv
 
-# Secure authentication with environment variables
-client = AxiomTradeClient()
-client.set_tokens(
-    access_token=os.getenv('AXIOM_ACCESS_TOKEN'),
-    refresh_token=os.getenv('AXIOM_REFRESH_TOKEN')
+load_dotenv()
+
+# Initialize client with credentials
+client = AxiomTradeClient(
+    username=os.getenv("EMAIL_ADDRESS"),
+    password=os.getenv("AXIOM_PASSWORD")
 )
 
-# Your trading logic here
-portfolio = client.get_user_portfolio()
+# Automatically logs in if no saved session exists
+# Will trigger an OTP flow if 2FA is required
+if not client.is_authenticated():
+    print("Please follow the login prompt...")
+    client.login() # Takes optional otp_callback
+
+# Simulate browser connection to initialize tracking sessions
+# This is required for some endpoints to register you as an "active user"
+# and to pass detailed bot or scraper protection checks.
+client.connect(
+    token_address="8P5kBTzvG7xyjTZRzi4ftzpy6mnL74AHLtHDqyDq44ST", # Optional: Simulate landing on a token page
+    sol_public_keys=["Address1...", "Address2..."], # Optional: Check balances during connect
+    evm_public_keys=["0xAddress1..."] 
+)
+
+print(f"Logged in as: {client.auth_manager.username}")
+```
+
+#### 2. Manual Token Authentication
+Use this for serverless environments or when you manage tokens externally.
+
+```python
+from axiomtradeapi import AxiomTradeClient
+
+client = AxiomTradeClient()
+client.set_tokens(
+    access_token="your_access_token_here",
+    refresh_token="your_refresh_token_here"
+)
 ```
 
 ### Advanced Features
