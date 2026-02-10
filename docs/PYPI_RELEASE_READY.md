@@ -1,17 +1,17 @@
-# AxiomTradeAPI-py v1.0.3 - PyPI Release Ready! 🚀
+# AxiomTradeAPI-py v1.0.6 - PyPI Release Ready! 🚀
 
 ## 📦 Package Built Successfully
 
-Your AxiomTradeAPI-py package is now ready for PyPI publication with version **1.0.3**!
+Your AxiomTradeAPI-py package is now ready for PyPI publication with version **1.0.6**!
 
 ### ✅ Build Results
-- **Source Distribution**: `axiomtradeapi-1.0.3.tar.gz` ✅
-- **Wheel Package**: `axiomtradeapi-1.0.3-py3-none-any.whl` ✅
+- **Source Distribution**: `axiomtradeapi-1.0.6.tar.gz` ✅
+- **Wheel Package**: `axiomtradeapi-1.0.6-py3-none-any.whl` ✅
 - **Package Validation**: All checks passed ✅
 
 ## 🎯 Release Information
 
-### Version: 1.0.3
+### Version: 1.0.6
 - **Status**: Production/Stable (upgraded from Beta)
 - **Python Support**: 3.7 - 3.12
 - **All Platforms**: Windows, macOS, Linux

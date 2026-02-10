@@ -1,3 +1,5 @@
 include README.md
 include LICENSE
 recursive-include axiomtradeapi *
+global-exclude __pycache__
+global-exclude *.pyc
