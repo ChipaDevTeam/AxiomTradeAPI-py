@@ -1,0 +1,21 @@
+{
+  "bundleKey": "hOD152mxACZ8x1ncjeDRGK61s+OjyNDmqsnyUsDV2Os=",
+  "wallets": [
+    {
+      "walletAddress": "TBz4rsUXYNzpPiieiBotoBtDsCUirboKnVzFpjNMiTU",
+      "network": "sol",
+      "isPrimary": true,
+      "isArchived": false,
+      "createdAt": "2025-06-18T18:08:21.998Z",
+      "name": "Axiom Main"
+    },
+    {
+      "walletAddress": "0x3de0205861aa0bd7392dae238773374d07b18441",
+      "network": "evm",
+      "isPrimary": true,
+      "isArchived": false,
+      "createdAt": "2025-06-18T18:08:21.998Z",
+      "name": "Axiom Main"
+    }
+  ]
+}
