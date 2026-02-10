@@ -9,21 +9,30 @@ import sys
 import subprocess
 import shutil
 
-def run_command(command, description):
+def run_command(command, description, capture=False):
     """Run a command and handle errors"""
     print(f"\n🔧 {description}")
     print(f"Running: {command}")
     
-    result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    
-    if result.returncode == 0:
-        print(f"✅ {description} completed successfully")
-        if result.stdout:
-            print(result.stdout)
+    if capture:
+        result = subprocess.run(command, shell=True, capture_output=True, text=True)
+        if result.returncode == 0:
+            print(f"✅ {description} completed successfully")
+            if result.stdout:
+                print(result.stdout)
+        else:
+            print(f"❌ {description} failed")
+            print(f"Error: {result.stderr}")
+            return False
     else:
-        print(f"❌ {description} failed")
-        print(f"Error: {result.stderr}")
-        return False
+        # Don't capture output for interactive commands (like twine upload)
+        # or when we want to see output in real-time
+        result = subprocess.run(command, shell=True)
+        if result.returncode == 0:
+            print(f"✅ {description} completed successfully")
+        else:
+            print(f"❌ {description} failed")
+            return False
     
     return True
 
