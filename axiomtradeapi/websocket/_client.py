@@ -273,11 +273,26 @@ class AxiomTradeWebSocketClient:
 
         self._callbacks[f"active_users_{token_address}"] = callback
         
+        rooms = [
+            f"t:{token_address}",
+            f"f:{token_address}",
+            f"td:{token_address}",
+            f"{token_address}-dex-paid",
+            f"s:{token_address}",
+            f"{token_address}_refresh",
+            f"{token_address}-wallet_funding",
+            f"kol_tx:{token_address}",
+            f"pump-cto:{token_address}",
+            f"e-{token_address}",
+            f"b-{token_address}"
+        ]
+        
         try:
-            await self.ws.send(json.dumps({
-                "action": "join",
-                "room": f"e-{token_address}"
-            }))
+            for room in rooms:
+                await self.ws.send(json.dumps({
+                    "action": "join",
+                    "room": room
+                }))
             self.logger.info(f"Subscribed to active users updates for token {token_address}")
             return True
         except Exception as e:
