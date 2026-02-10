@@ -555,6 +555,11 @@ class AxiomTradeClient:
             except Exception as e:
                 self.logger.error(f"Failed to save {name}: {e}")
 
+        # Ensure session is in sync with current tokens
+        if self.auth_manager.tokens:
+            self.session.cookies.set('auth-access-token', self.auth_manager.tokens.access_token)
+            self.session.cookies.set('auth-refresh-token', self.auth_manager.tokens.refresh_token)
+
         # Ensure we have keys to query, even if empty
         sol_keys = sol_public_keys or []
         evm_keys = evm_public_keys or []
