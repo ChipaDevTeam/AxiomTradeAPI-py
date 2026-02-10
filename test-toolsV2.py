@@ -78,6 +78,18 @@ class ActiveUserMonitorBot:
         else:
             logger.info("✅ Successfully resumed existing session.")
 
+        # Simulate browser connection to register as an active user
+        logger.info("🌍 Simulating full browser connection sequence...")
+        token_address = "8P5kBTzvG7xyjTZRzi4ftzpy6mnL74AHLtHDqyDq44ST"
+        
+        # Run synchronous connect method in executor
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            None,
+            lambda: self.client.connect(token_address=token_address)
+        )
+        logger.info("✅ Browser connection simulation complete.")
+
     async def _perform_login(self):
         """Handle the login process if not authenticated."""
         if not self.email or not self.axiom_password or not self.email_app_password:
