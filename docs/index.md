@@ -10,8 +10,8 @@
 
 *Build advanced trading bots, monitor portfolios, and automate Solana DeFi strategies with enterprise-grade reliability*
 
-[![Discord](https://img.shields.io/discord/YOUR_DISCORD_ID?color=7289da&label=Join%20Discord&logo=discord&logoColor=white)](https://discord.gg/p7YyFqSmAz)
-[![Professional Services](https://img.shields.io/badge/Professional-Services-green)](https://shop.chipatrade.com/products/create-your-bot?variant=42924637487206)
+[![Community](https://img.shields.io/badge/Join-Community-blue?logo=discord&logoColor=white)](https://chipatrade.com/community)
+[![Professional Services](https://img.shields.io/badge/Professional-Services-green)](https://chipatrade.com/services/bot-development)
 
 </div>
 
