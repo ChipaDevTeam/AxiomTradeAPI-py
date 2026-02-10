@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "axiomtradeapi"
-version = "1.0.8"
+version = "1.0.9"
 description = "A comprehensive Python client for the AxiomTrade API with automatic token management, secure authentication, and extensive trading analytics for Solana meme tokens."
 readme = "README.md"
 license = "MIT"

@@ -58,7 +58,7 @@ async def test_active_users():
         print(f"Update #{update_count[0]}: {count} active users")
     
     try:
-        await client.get_active_axiom_users(callback=tracking_callback, duration=15)
+        await client.get_active_axiom_users(callback=tracking_callback, duration=15, token_address="8P5kBTzvG7xyjTZRzi4ftzpy6mnL74AHLtHDqyDq44ST")
     except KeyboardInterrupt:
         print("\n\n⚠️  Test interrupted by user")
     except Exception as e:
