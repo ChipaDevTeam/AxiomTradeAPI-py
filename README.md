@@ -323,13 +323,27 @@ Special thanks to:
 - Our community of developers and traders for continuous feedback
 - All contributors who help improve this library
 
+## 🌐 Community & Services
+
+Join our growing community of traders and developers!
+
+<div align="center">
+
+### [💬 Join our Community](https://chipatrade.com/community)
+Connect with other traders, share strategies, and get help with the API.
+
+### [🤖 Bot Development Services](https://chipatrade.com/services/bot-development)
+Need a custom trading bot? Our expert team builds high-performance custom solutions tailored to your strategy.
+
+</div>
+
 ---
 
 <div align="center">
 
 **Built with ❤️ by the ChipaDevTeam**
 
-[Website](https://chipa.tech) • [Documentation](https://chipadevteam.github.io/AxiomTradeAPI-py) • [Discord](https://discord.gg/p7YyFqSmAz) • [Professional Services](https://shop.chipatrade.com/products/create-your-bot)
+[Website](https://chipatrade.com) • [Documentation](https://chipadevteam.github.io/AxiomTradeAPI-py) • [Community](https://chipatrade.com/community) • [Services](https://chipatrade.com/services/bot-development)
 
 *⭐ Star this repository if you find it useful!*
 
