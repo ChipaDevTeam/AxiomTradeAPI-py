@@ -11,7 +11,7 @@
 
 *Build advanced trading bots, monitor portfolios, and automate Solana DeFi strategies with enterprise-grade reliability*
 
-[📚 **Documentation**](https://chipadevteam.github.io/AxiomTradeAPI-py) • [🚀 **Quick Start**](#quick-start) • [💬 **Discord**](https://discord.gg/p7YyFqSmAz) • [🛒 **Professional Services**](https://shop.chipatrade.com/products/create-your-bot?variant=42924637487206)
+[📚 **Documentation**](https://chipadevteam.github.io/AxiomTradeAPI-py) • [🚀 **Quick Start**](#quick-start) • [💬 **Community**](https://chipatrade.com/community) • [🛒 **Bot Development Services**](https://chipatrade.com/services/bot-development)
 
 </div>
 
