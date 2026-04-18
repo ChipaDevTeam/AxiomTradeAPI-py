@@ -6,8 +6,8 @@ import os
 load_dotenv()
 
 client = AxiomTradeClient(
-    username=os.getenv("email"),
-    password=os.getenv("password")
+    access_token=os.getenv("AXIOM_ACCESS_TOKEN"),
+    refresh_token=os.getenv("AXIOM_REFRESH_TOKEN")
 )
 
 # Automatically logs in if no saved session exists
