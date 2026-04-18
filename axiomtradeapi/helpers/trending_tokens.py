@@ -219,8 +219,7 @@ def refresh_access_token(refresh_token):
     response.raise_for_status()
     return response.json().get('auth-access-token')
 
-def get_trending_tokens(access_token, time_period='1h'):
-    url = 'https://api3.axiom.trade/new-trending-v2'
+def get_trending_tokens(access_token, time_period='1h', raise_on_error=False):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
         'Accept': 'application/json, text/plain, */*',
@@ -239,46 +238,77 @@ def get_trending_tokens(access_token, time_period='1h'):
         '24h': ['24h', '6h', '1h', '5m'],
         '7d': ['7d', '24h', '6h', '1h', '5m'],
     }
-    retryable_statuses = {408, 429, 500, 502, 503, 504}
+    hosts_to_try = [
+        'api3.axiom.trade',
+        'api6.axiom.trade',
+        'api9.axiom.trade',
+        'api10.axiom.trade',
+    ]
+    retryable_statuses = {408, 425, 429, 500, 502, 503, 504}
     periods_to_try = fallback_order.get(time_period, [time_period, '1h', '5m'])
     attempted_periods = []
+    attempted_urls = []
     last_error = None
 
     for candidate_period in periods_to_try:
         attempted_periods.append(candidate_period)
 
-        for attempt in range(1, 3 + 1):
-            try:
-                response = requests.get(
-                    url,
-                    headers=headers,
-                    params={
-                        'timePeriod': candidate_period,
-                        'v': int(time.time() * 1000)
-                    },
-                    timeout=30
-                )
-                response.raise_for_status()
-                result = _normalize_trending_response(response.json(), candidate_period)
-                result['requestedTimePeriod'] = time_period
-                result['fallbackUsed'] = candidate_period != time_period
-                result['attemptedTimePeriods'] = attempted_periods.copy()
-                return result
-            except requests.HTTPError as e:
-                last_error = e
-                status_code = e.response.status_code if e.response is not None else None
-                if status_code not in retryable_statuses or attempt >= 3:
-                    break
-                time.sleep(0.4 * attempt)
-            except requests.RequestException as e:
-                last_error = e
-                if attempt >= 3:
-                    break
-                time.sleep(0.4 * attempt)
+        for host in hosts_to_try:
+            url = f'https://{host}/new-trending-v2'
+            attempted_urls.append(f'{url}?timePeriod={candidate_period}')
 
-    raise Exception(
-        f"Failed to get trending tokens after trying {attempted_periods}: {last_error}"
-    )
+            for attempt in range(1, 3 + 1):
+                try:
+                    response = requests.get(
+                        url,
+                        headers=headers,
+                        params={
+                            'timePeriod': candidate_period,
+                            'v': int(time.time() * 1000)
+                        },
+                        timeout=30
+                    )
+                    response.raise_for_status()
+                    result = _normalize_trending_response(response.json(), candidate_period)
+                    result['requestedTimePeriod'] = time_period
+                    result['fallbackUsed'] = candidate_period != time_period or host != hosts_to_try[0]
+                    result['attemptedTimePeriods'] = attempted_periods.copy()
+                    result['attemptedUrls'] = attempted_urls.copy()
+                    result['success'] = True
+                    result['serviceAvailable'] = True
+                    result['hostUsed'] = host
+                    return result
+                except requests.HTTPError as e:
+                    last_error = e
+                    status_code = e.response.status_code if e.response is not None else None
+                    if status_code not in retryable_statuses or attempt >= 3:
+                        break
+                    time.sleep(0.5 * attempt)
+                except requests.RequestException as e:
+                    last_error = e
+                    if attempt >= 3:
+                        break
+                    time.sleep(0.5 * attempt)
+
+    error_result = {
+        'tokens': [],
+        'data': [],
+        'count': 0,
+        'timePeriod': time_period,
+        'requestedTimePeriod': time_period,
+        'fallbackUsed': False,
+        'attemptedTimePeriods': attempted_periods,
+        'attemptedUrls': attempted_urls,
+        'endpoint': 'new-trending-v2',
+        'success': False,
+        'serviceAvailable': False,
+        'error': str(last_error),
+    }
+    if raise_on_error:
+        raise Exception(
+            f"Failed to get trending tokens after trying periods {attempted_periods} across multiple hosts: {last_error}"
+        )
+    return error_result
 
 if __name__ == '__main__':
     print("Axiom Trade API - Login and Trending Tokens")

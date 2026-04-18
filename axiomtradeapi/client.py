@@ -327,6 +327,7 @@ class AxiomTradeClient:
             payload.setdefault("data", payload.get("tokens", []))
             payload.setdefault("timePeriod", time_period)
             payload.setdefault("endpoint", "new-trending-v2")
+            payload.setdefault("count", len(payload.get("tokens", [])))
             return payload
 
         if isinstance(payload, list):
@@ -347,23 +348,111 @@ class AxiomTradeClient:
             "endpoint": "new-trending-v2",
             "count": 0,
         }
+
+    def _get_trending_cache_file(self, time_period: str) -> str:
+        """Return the cache file path for a trending period."""
+        cache_dir = os.path.join('.chipadev_data', 'cache')
+        os.makedirs(cache_dir, exist_ok=True)
+        safe_period = ''.join(ch for ch in str(time_period) if ch.isalnum()) or 'default'
+        return os.path.join(cache_dir, f'trending_{safe_period}.json')
+
+    def _save_trending_cache(self, time_period: str, payload: Dict) -> None:
+        """Persist a successful trending response for fallback use."""
+        try:
+            cache_file = self._get_trending_cache_file(time_period)
+            cache_payload = {
+                'cachedAt': int(time.time()),
+                'timePeriod': time_period,
+                'payload': payload,
+            }
+            with open(cache_file, 'w', encoding='utf-8') as f:
+                json.dump(cache_payload, f)
+        except Exception as exc:
+            self.logger.debug(f"Unable to save trending cache for {time_period}: {exc}")
+
+    def _load_trending_cache(self, periods: List[str], max_cache_age_seconds: int = 900) -> Optional[Dict]:
+        """Load the newest valid cached trending response for the given periods."""
+        best_payload = None
+        best_timestamp = 0
+
+        for period in periods:
+            try:
+                cache_file = self._get_trending_cache_file(period)
+                if not os.path.exists(cache_file):
+                    continue
+
+                with open(cache_file, 'r', encoding='utf-8') as f:
+                    cached = json.load(f)
+
+                cached_at = int(cached.get('cachedAt', 0))
+                if max_cache_age_seconds and cached_at and (time.time() - cached_at) > max_cache_age_seconds:
+                    continue
+
+                payload = cached.get('payload')
+                if payload and cached_at >= best_timestamp:
+                    best_payload = payload
+                    best_timestamp = cached_at
+            except Exception as exc:
+                self.logger.debug(f"Unable to load trending cache for {period}: {exc}")
+
+        return best_payload
+
+    def _build_trending_error_result(self, requested_period: str, attempted_periods: List[str], attempted_urls: List[str], error: Exception) -> Dict:
+        """Return a structured non-throwing error payload for trending failures."""
+        return {
+            'tokens': [],
+            'data': [],
+            'count': 0,
+            'timePeriod': requested_period,
+            'requestedTimePeriod': requested_period,
+            'fallbackUsed': False,
+            'attemptedTimePeriods': attempted_periods,
+            'attemptedUrls': attempted_urls,
+            'endpoint': 'new-trending-v2',
+            'success': False,
+            'serviceAvailable': False,
+            'error': str(error),
+        }
     
-    def get_trending_tokens(self, time_period: str = '1h') -> Dict:
+    def get_trending_tokens(self, time_period: str = '1h', raise_on_error: bool = False, max_cache_age_seconds: int = 900) -> Dict:
         """
         Get trending meme tokens from the current v2 endpoint.
-        Common time periods include: 5m, 1h, 6h, 24h, 7d.
-        If the upstream API is temporarily unstable, the client retries and
-        falls back to the nearest working period automatically.
+
+        The client now uses:
+        - retries for transient HTTP failures
+        - host failover across multiple Axiom API domains
+        - period fallback for unstable server ranges
+        - cached-response fallback when the live service is down
+
+        Args:
+            time_period: Requested period such as 5m, 1h, 6h, 24h, or 7d
+            raise_on_error: If True, raise an exception instead of returning an error payload
+            max_cache_age_seconds: Maximum age for cached fallback responses
         """
         if not self.ensure_authenticated():
             raise ValueError("Authentication failed. Please login first.")
+
+        normalized_period = str(time_period).strip().lower()
+        period_aliases = {
+            '5min': '5m',
+            '5mins': '5m',
+            '60m': '1h',
+            '60min': '1h',
+            '1hr': '1h',
+            '4h': '6h',
+            '12h': '24h',
+            '1d': '24h',
+            '24hr': '24h',
+            '24hrs': '24h',
+            '7days': '7d',
+        }
+        normalized_period = period_aliases.get(normalized_period, normalized_period)
 
         if self.auth_manager.tokens:
             self.session.cookies.set('auth-access-token', self.auth_manager.tokens.access_token)
             if self.auth_manager.tokens.refresh_token:
                 self.session.cookies.set('auth-refresh-token', self.auth_manager.tokens.refresh_token)
 
-        url = 'https://api3.axiom.trade/new-trending-v2'
         headers = dict(self.base_headers)
         headers.update({
             'Referer': 'https://axiom.trade/',
@@ -377,55 +466,100 @@ class AxiomTradeClient:
             '24h': ['24h', '6h', '1h', '5m'],
             '7d': ['7d', '24h', '6h', '1h', '5m'],
         }
-        retryable_statuses = {408, 429, 500, 502, 503, 504}
-        periods_to_try = fallback_order.get(time_period, [time_period, '1h', '5m'])
+        hosts_to_try = [
+            'api3.axiom.trade',
+            'api6.axiom.trade',
+            'api9.axiom.trade',
+            'api10.axiom.trade',
+        ]
+        retryable_statuses = {408, 425, 429, 500, 502, 503, 504}
+        periods_to_try = fallback_order.get(normalized_period, [normalized_period, '1h', '5m'])
         attempted_periods = []
+        attempted_urls = []
         last_error = None
+        initialized_session = False
 
         for candidate_period in periods_to_try:
             attempted_periods.append(candidate_period)
 
-            for attempt in range(1, 3 + 1):
-                try:
-                    response = self.session.get(
-                        url,
-                        params={
-                            'timePeriod': candidate_period,
-                            'v': int(time.time() * 1000)
-                        },
-                        headers=headers,
-                        timeout=30
-                    )
-                    response.raise_for_status()
+            for host in hosts_to_try:
+                url = f'https://{host}/new-trending-v2'
+                attempted_urls.append(f'{url}?timePeriod={candidate_period}')
 
-                    result = self._normalize_trending_response(response.json(), candidate_period)
-                    result['requestedTimePeriod'] = time_period
-                    result['fallbackUsed'] = candidate_period != time_period
-                    result['attemptedTimePeriods'] = attempted_periods.copy()
-                    return result
-                except requests.HTTPError as e:
-                    last_error = e
-                    status_code = e.response.status_code if e.response is not None else None
+                for attempt in range(1, 3 + 1):
+                    try:
+                        response = self.session.get(
+                            url,
+                            params={
+                                'timePeriod': candidate_period,
+                                'v': int(time.time() * 1000)
+                            },
+                            headers=headers,
+                            timeout=30
+                        )
+                        response.raise_for_status()
 
-                    if status_code in {403, 500} and attempt == 1:
-                        try:
-                            self.connect(sol_public_keys=[], evm_public_keys=[])
-                        except Exception:
-                            pass
+                        result = self._normalize_trending_response(response.json(), candidate_period)
+                        result['requestedTimePeriod'] = normalized_period
+                        result['fallbackUsed'] = candidate_period != normalized_period or host != hosts_to_try[0]
+                        result['attemptedTimePeriods'] = attempted_periods.copy()
+                        result['attemptedUrls'] = attempted_urls.copy()
+                        result['success'] = True
+                        result['serviceAvailable'] = True
+                        result['hostUsed'] = host
+                        result['stale'] = False
+                        self._save_trending_cache(normalized_period, result)
+                        self._save_trending_cache(candidate_period, result)
+                        return result
+                    except requests.HTTPError as e:
+                        last_error = e
+                        status_code = e.response.status_code if e.response is not None else None
 
-                    if status_code not in retryable_statuses or attempt >= 3:
+                        if status_code in {401, 403} and attempt == 1:
+                            try:
+                                self.auth_manager.refresh_tokens()
+                            except Exception:
+                                pass
+
+                        if status_code in {403, 500, 502, 503} and not initialized_session:
+                            initialized_session = True
+                            try:
+                                self.connect(sol_public_keys=[], evm_public_keys=[])
+                            except Exception:
+                                pass
+
+                        if status_code not in retryable_statuses or attempt >= 3:
+                            break
+
+                        time.sleep(0.5 * attempt)
+                    except requests.RequestException as e:
+                        last_error = e
+                        if attempt >= 3:
+                            break
+                        time.sleep(0.5 * attempt)
+                    except Exception as e:
+                        last_error = e
                         break
 
-                    time.sleep(0.4 * attempt)
-                except requests.RequestException as e:
-                    last_error = e
-                    if attempt >= 3:
-                        break
-                    time.sleep(0.4 * attempt)
+        cached_result = self._load_trending_cache(periods_to_try, max_cache_age_seconds=max_cache_age_seconds)
+        if cached_result:
+            cached_result = dict(cached_result)
+            cached_result['requestedTimePeriod'] = normalized_period
+            cached_result['attemptedTimePeriods'] = attempted_periods
+            cached_result['attemptedUrls'] = attempted_urls
+            cached_result['fallbackUsed'] = True
+            cached_result['success'] = True
+            cached_result['serviceAvailable'] = False
+            cached_result['stale'] = True
+            cached_result['warning'] = f'Live trending endpoint unavailable. Returning cached data. Last error: {last_error}'
+            return cached_result
 
-        raise Exception(
-            f"Failed to get trending tokens after trying {attempted_periods}: {last_error}"
-        )
+        error_result = self._build_trending_error_result(normalized_period, attempted_periods, attempted_urls, last_error or Exception('Unknown trending error'))
+        if raise_on_error:
+            raise Exception(
+                f"Failed to get trending tokens after trying periods {attempted_periods} across hosts {hosts_to_try}: {last_error}"
+            )
+        return error_result
     
     def get_token_info(self, token_address: str) -> Dict:
         """
