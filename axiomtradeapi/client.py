@@ -399,6 +399,19 @@ class AxiomTradeClient:
 
     def _build_trending_error_result(self, requested_period: str, attempted_periods: List[str], attempted_urls: List[str], error: Exception) -> Dict:
         """Return a structured non-throwing error payload for trending failures."""
+        error_message = str(error).strip() if error else ''
+        status_code = None
+        failing_url = None
+
+        if isinstance(error, requests.HTTPError) and getattr(error, 'response', None) is not None:
+            status_code = error.response.status_code
+            failing_url = error.response.url
+            if not error_message:
+                error_message = f'HTTP {status_code} error while requesting trending data from {failing_url}'
+
+        if not error_message:
+            error_message = 'Trending service is temporarily unavailable. No live or cached data could be returned.'
+
         return {
             'tokens': [],
             'data': [],
@@ -411,7 +424,9 @@ class AxiomTradeClient:
             'endpoint': 'new-trending-v2',
             'success': False,
             'serviceAvailable': False,
-            'error': str(error),
+            'statusCode': status_code,
+            'failingUrl': failing_url,
+            'error': error_message,
         }
     
     def get_trending_tokens(self, time_period: str = '1h', raise_on_error: bool = False, max_cache_age_seconds: int = 900) -> Dict:

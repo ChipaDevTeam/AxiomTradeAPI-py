@@ -290,6 +290,17 @@ def get_trending_tokens(access_token, time_period='1h', raise_on_error=False):
                         break
                     time.sleep(0.5 * attempt)
 
+    error_message = str(last_error).strip() if last_error else ''
+    status_code = None
+    failing_url = None
+    if isinstance(last_error, requests.HTTPError) and getattr(last_error, 'response', None) is not None:
+        status_code = last_error.response.status_code
+        failing_url = last_error.response.url
+        if not error_message:
+            error_message = f'HTTP {status_code} error while requesting trending data from {failing_url}'
+    if not error_message:
+        error_message = 'Trending service is temporarily unavailable. No live data could be returned.'
+
     error_result = {
         'tokens': [],
         'data': [],
@@ -302,7 +313,9 @@ def get_trending_tokens(access_token, time_period='1h', raise_on_error=False):
         'endpoint': 'new-trending-v2',
         'success': False,
         'serviceAvailable': False,
-        'error': str(last_error),
+        'statusCode': status_code,
+        'failingUrl': failing_url,
+        'error': error_message,
     }
     if raise_on_error:
         raise Exception(
