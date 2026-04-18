@@ -1,12 +1,12 @@
 {
-  "numHolders": 0,
-  "numBotUsers": 0,
   "top10HoldersPercent": 0,
   "devHoldsPercent": 0,
+  "snipersHoldPercent": 0,
   "insidersHoldPercent": 0,
   "bundlersHoldPercent": 0,
-  "snipersHoldPercent": 0,
   "dexPaid": false,
   "dexPaidTime": null,
+  "numHolders": 0,
+  "numBotUsers": 0,
   "totalPairFeesPaid": 0.0521960051
 }
