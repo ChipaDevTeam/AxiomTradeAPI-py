@@ -1,6 +1,124 @@
 import requests
 import json
-from typing import Dict, Optional
+import time
+from typing import Any, Dict, Optional
+
+
+TRENDING_V2_FIELDS = [
+    "pairAddress",
+    "tokenAddress",
+    "tokenName",
+    "tokenTicker",
+    "imageUrl",
+    "metadataUrl",
+    "chainId",
+    "exchangeName",
+    "exchangeData",
+    "createdAt",
+    "website",
+    "twitter",
+    "telegram",
+    "discord",
+    "link1",
+    "link2",
+    "isMigrated",
+    "creatorAddress",
+    "supply",
+    "liquiditySol",
+    "completionPercent",
+    "migrationInfo",
+    "txCount",
+    "volume",
+    "marketCapUsd",
+    "buyCount",
+    "sellCount",
+    "makerCount",
+    "liquidityUsd",
+    "priceUsd",
+    "priceChange5m",
+    "priceChange1h",
+    "priceChange6h",
+    "priceChange24h",
+    "holderRatio",
+    "top10HoldersPercent",
+    "sniperCount",
+    "insiderPercentage",
+    "bundlePercentage",
+    "developerHoldingPercent",
+    "buyers",
+    "sellers",
+    "sparkline",
+    "holderCount",
+    "signature",
+    "slot",
+    "quoteLiquidity",
+    "baseLiquidity",
+    "pairCreatedAt",
+    "pairAddressRaw",
+    "reserveAddressA",
+    "updatedAt"
+]
+
+
+def _parse_trending_value(value: Any):
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped and stripped[0] in "[{":
+            try:
+                return json.loads(stripped)
+            except (json.JSONDecodeError, TypeError, ValueError):
+                return value
+    return value
+
+
+def _normalize_trending_token(row: Any) -> Dict:
+    if isinstance(row, dict):
+        normalized = dict(row)
+        normalized.setdefault("raw", row)
+        return normalized
+
+    if not isinstance(row, list):
+        return {"raw": row}
+
+    token = {f"field_{idx}": _parse_trending_value(value) for idx, value in enumerate(row)}
+    for idx, field_name in enumerate(TRENDING_V2_FIELDS):
+        if idx < len(row):
+            token[field_name] = _parse_trending_value(row[idx])
+
+    token["raw"] = row
+    return token
+
+
+def _normalize_trending_response(payload: Any, time_period: str) -> Dict:
+    if isinstance(payload, dict):
+        if isinstance(payload.get("tokens"), list):
+            payload["tokens"] = [_normalize_trending_token(item) for item in payload["tokens"]]
+        elif isinstance(payload.get("data"), list):
+            payload["tokens"] = [_normalize_trending_token(item) for item in payload["data"]]
+
+        payload.setdefault("data", payload.get("tokens", []))
+        payload.setdefault("timePeriod", time_period)
+        payload.setdefault("endpoint", "new-trending-v2")
+        return payload
+
+    if isinstance(payload, list):
+        tokens = [_normalize_trending_token(item) for item in payload]
+        return {
+            "tokens": tokens,
+            "data": tokens,
+            "timePeriod": time_period,
+            "endpoint": "new-trending-v2",
+            "count": len(tokens),
+            "raw": payload,
+        }
+
+    return {
+        "tokens": [],
+        "data": payload,
+        "timePeriod": time_period,
+        "endpoint": "new-trending-v2",
+        "count": 0,
+    }
 
 def login_step1(email: str, b64_password: str) -> str:
     """
@@ -102,22 +220,29 @@ def refresh_access_token(refresh_token):
     return response.json().get('auth-access-token')
 
 def get_trending_tokens(access_token, time_period='1h'):
-    url = f'https://api6.axiom.trade/meme-trending?timePeriod={time_period}'
+    url = 'https://api3.axiom.trade/new-trending-v2'
     headers = {
-        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
         'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate, br, zstd',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Origin': 'https://axiom.trade',
         'Connection': 'keep-alive',
         'Referer': 'https://axiom.trade/',
+        'priority': 'u=1, i',
         'Cookie': f'auth-access-token={access_token}',
-        'TE': 'trailers'
     }
 
-    response = requests.get(url, headers=headers)
+    response = requests.get(
+        url,
+        headers=headers,
+        params={
+            'timePeriod': time_period,
+            'v': int(time.time() * 1000)
+        },
+        timeout=30
+    )
     response.raise_for_status()
-    return response.json()
+    return _normalize_trending_response(response.json(), time_period)
 
 if __name__ == '__main__':
     print("Axiom Trade API - Login and Trending Tokens")

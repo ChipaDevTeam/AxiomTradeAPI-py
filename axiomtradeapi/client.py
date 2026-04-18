@@ -226,22 +226,160 @@ class AxiomTradeClient:
     def get_token_info_detailed(self) -> Dict:
         """Get detailed information about current tokens"""
         return self.auth_manager.get_token_info()
+
+    @staticmethod
+    def _parse_trending_value(value):
+        """Parse embedded JSON values from the trending endpoint when present."""
+        if isinstance(value, str):
+            stripped = value.strip()
+            if stripped and stripped[0] in "[{":
+                try:
+                    return json.loads(stripped)
+                except (json.JSONDecodeError, TypeError, ValueError):
+                    return value
+        return value
+
+    def _normalize_trending_token(self, row: Union[Dict, List]) -> Dict:
+        """Normalize the new array-based trending payload into a dictionary."""
+        if isinstance(row, dict):
+            normalized = dict(row)
+            normalized.setdefault("raw", row)
+            return normalized
+
+        if not isinstance(row, list):
+            return {"raw": row}
+
+        field_names = [
+            "pairAddress",
+            "tokenAddress",
+            "tokenName",
+            "tokenTicker",
+            "imageUrl",
+            "metadataUrl",
+            "chainId",
+            "exchangeName",
+            "exchangeData",
+            "createdAt",
+            "website",
+            "twitter",
+            "telegram",
+            "discord",
+            "link1",
+            "link2",
+            "isMigrated",
+            "creatorAddress",
+            "supply",
+            "liquiditySol",
+            "completionPercent",
+            "migrationInfo",
+            "txCount",
+            "volume",
+            "marketCapUsd",
+            "buyCount",
+            "sellCount",
+            "makerCount",
+            "liquidityUsd",
+            "priceUsd",
+            "priceChange5m",
+            "priceChange1h",
+            "priceChange6h",
+            "priceChange24h",
+            "holderRatio",
+            "top10HoldersPercent",
+            "sniperCount",
+            "insiderPercentage",
+            "bundlePercentage",
+            "developerHoldingPercent",
+            "buyers",
+            "sellers",
+            "sparkline",
+            "holderCount",
+            "signature",
+            "slot",
+            "quoteLiquidity",
+            "baseLiquidity",
+            "pairCreatedAt",
+            "pairAddressRaw",
+            "reserveAddressA",
+            "updatedAt"
+        ]
+
+        token = {
+            f"field_{idx}": self._parse_trending_value(value)
+            for idx, value in enumerate(row)
+        }
+
+        for idx, field_name in enumerate(field_names):
+            if idx < len(row):
+                token[field_name] = self._parse_trending_value(row[idx])
+
+        token["raw"] = row
+        return token
+
+    def _normalize_trending_response(self, payload: Union[Dict, List], time_period: str) -> Dict:
+        """Return a backward-compatible dictionary payload for trending tokens."""
+        if isinstance(payload, dict):
+            if isinstance(payload.get("tokens"), list):
+                payload["tokens"] = [self._normalize_trending_token(item) for item in payload["tokens"]]
+            elif isinstance(payload.get("data"), list):
+                payload["tokens"] = [self._normalize_trending_token(item) for item in payload["data"]]
+
+            payload.setdefault("data", payload.get("tokens", []))
+            payload.setdefault("timePeriod", time_period)
+            payload.setdefault("endpoint", "new-trending-v2")
+            return payload
+
+        if isinstance(payload, list):
+            tokens = [self._normalize_trending_token(item) for item in payload]
+            return {
+                "tokens": tokens,
+                "data": tokens,
+                "timePeriod": time_period,
+                "endpoint": "new-trending-v2",
+                "count": len(tokens),
+                "raw": payload,
+            }
+
+        return {
+            "tokens": [],
+            "data": payload,
+            "timePeriod": time_period,
+            "endpoint": "new-trending-v2",
+            "count": 0,
+        }
     
     def get_trending_tokens(self, time_period: str = '1h') -> Dict:
         """
-        Get trending meme tokens
-        Available time periods: 1h, 24h, 7d
+        Get trending meme tokens from the current v2 endpoint.
+        Common time periods include: 5m, 1h, 6h, 24h, 7d
         """
-        # Ensure we have valid authentication
         if not self.ensure_authenticated():
             raise ValueError("Authentication failed. Please login first.")
-        
-        url = f'https://api6.axiom.trade/meme-trending?timePeriod={time_period}'
-        
+
+        if self.auth_manager.tokens:
+            self.session.cookies.set('auth-access-token', self.auth_manager.tokens.access_token)
+            if self.auth_manager.tokens.refresh_token:
+                self.session.cookies.set('auth-refresh-token', self.auth_manager.tokens.refresh_token)
+
+        url = 'https://api3.axiom.trade/new-trending-v2'
+        headers = dict(self.base_headers)
+        headers.update({
+            'Referer': 'https://axiom.trade/',
+            'priority': 'u=1, i'
+        })
+
         try:
-            response = self.auth_manager.make_authenticated_request('GET', url)
+            response = self.session.get(
+                url,
+                params={
+                    'timePeriod': time_period,
+                    'v': int(time.time() * 1000)
+                },
+                headers=headers,
+                timeout=30
+            )
             response.raise_for_status()
-            return response.json()
+            return self._normalize_trending_response(response.json(), time_period)
         except Exception as e:
             raise Exception(f"Failed to get trending tokens: {e}")
     
