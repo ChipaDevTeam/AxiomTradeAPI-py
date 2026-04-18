@@ -6,7 +6,7 @@ import os
 load_dotenv()
 
 client = AxiomTradeClient(
-    access_token=os.getenv("AXIOM_ACCESS_TOKEN"),
+    auth_token=os.getenv("AXIOM_ACCESS_TOKEN"),
     refresh_token=os.getenv("AXIOM_REFRESH_TOKEN")
 )
 
