@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "axiomtradeapi"
+version = "1.1.4"
+description = "A comprehensive Python client for the AxiomTrade API with automatic token management, secure authentication, and extensive trading analytics for Solana meme tokens."
+readme = "README.md"
+license = "MIT"
+authors = [
+    {name = "ChipaDevTeam"}
+]
+keywords = ["axiom", "trade", "solana", "crypto", "trading", "api", "websocket", "telegram", "bot", "meme", "tokens", "analytics", "authentication"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+requires-python = ">=3.7"
+dependencies = [
+    "websockets>=10.0",
+    "python-dotenv",
+    "solders",
+    "requests>=2.25.1",
+    "base58>=2.1.0",
+    "cryptography>=3.4.8",
+]
+
+[project.optional-dependencies]
+telegram = ["python-telegram-bot>=20.0"]
+dev = ["pytest", "black", "flake8"]
+all-proxies = ["beautifulsoup4", "websockets-proxy>=0.1.0", "requests[socks]"]
+
+[project.urls]
+Homepage = "https://github.com/ChipaDevTeam/AxiomTradeAPI-py"
+Repository = "https://github.com/ChipaDevTeam/AxiomTradeAPI-py"
+Documentation = "https://chipadevteam.github.io/AxiomTradeAPI-py/"
+"Bug Reports" = "https://github.com/ChipaDevTeam/AxiomTradeAPI-py/issues"

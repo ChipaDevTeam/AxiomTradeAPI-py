@@ -1,0 +1,6 @@
+websockets==10.0
+python-dotenv
+solders
+requests>=2.25.1
+base58>=2.1.0
+cryptography>=3.4.8
