@@ -232,17 +232,53 @@ def get_trending_tokens(access_token, time_period='1h'):
         'Cookie': f'auth-access-token={access_token}',
     }
 
-    response = requests.get(
-        url,
-        headers=headers,
-        params={
-            'timePeriod': time_period,
-            'v': int(time.time() * 1000)
-        },
-        timeout=30
+    fallback_order = {
+        '5m': ['5m', '1h'],
+        '1h': ['1h', '5m'],
+        '6h': ['6h', '1h', '5m'],
+        '24h': ['24h', '6h', '1h', '5m'],
+        '7d': ['7d', '24h', '6h', '1h', '5m'],
+    }
+    retryable_statuses = {408, 429, 500, 502, 503, 504}
+    periods_to_try = fallback_order.get(time_period, [time_period, '1h', '5m'])
+    attempted_periods = []
+    last_error = None
+
+    for candidate_period in periods_to_try:
+        attempted_periods.append(candidate_period)
+
+        for attempt in range(1, 3 + 1):
+            try:
+                response = requests.get(
+                    url,
+                    headers=headers,
+                    params={
+                        'timePeriod': candidate_period,
+                        'v': int(time.time() * 1000)
+                    },
+                    timeout=30
+                )
+                response.raise_for_status()
+                result = _normalize_trending_response(response.json(), candidate_period)
+                result['requestedTimePeriod'] = time_period
+                result['fallbackUsed'] = candidate_period != time_period
+                result['attemptedTimePeriods'] = attempted_periods.copy()
+                return result
+            except requests.HTTPError as e:
+                last_error = e
+                status_code = e.response.status_code if e.response is not None else None
+                if status_code not in retryable_statuses or attempt >= 3:
+                    break
+                time.sleep(0.4 * attempt)
+            except requests.RequestException as e:
+                last_error = e
+                if attempt >= 3:
+                    break
+                time.sleep(0.4 * attempt)
+
+    raise Exception(
+        f"Failed to get trending tokens after trying {attempted_periods}: {last_error}"
     )
-    response.raise_for_status()
-    return _normalize_trending_response(response.json(), time_period)
 
 if __name__ == '__main__':
     print("Axiom Trade API - Login and Trending Tokens")

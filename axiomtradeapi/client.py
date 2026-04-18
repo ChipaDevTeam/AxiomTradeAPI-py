@@ -351,7 +351,9 @@ class AxiomTradeClient:
     def get_trending_tokens(self, time_period: str = '1h') -> Dict:
         """
         Get trending meme tokens from the current v2 endpoint.
-        Common time periods include: 5m, 1h, 6h, 24h, 7d
+        Common time periods include: 5m, 1h, 6h, 24h, 7d.
+        If the upstream API is temporarily unstable, the client retries and
+        falls back to the nearest working period automatically.
         """
         if not self.ensure_authenticated():
             raise ValueError("Authentication failed. Please login first.")
@@ -368,20 +370,62 @@ class AxiomTradeClient:
             'priority': 'u=1, i'
         })
 
-        try:
-            response = self.session.get(
-                url,
-                params={
-                    'timePeriod': time_period,
-                    'v': int(time.time() * 1000)
-                },
-                headers=headers,
-                timeout=30
-            )
-            response.raise_for_status()
-            return self._normalize_trending_response(response.json(), time_period)
-        except Exception as e:
-            raise Exception(f"Failed to get trending tokens: {e}")
+        fallback_order = {
+            '5m': ['5m', '1h'],
+            '1h': ['1h', '5m'],
+            '6h': ['6h', '1h', '5m'],
+            '24h': ['24h', '6h', '1h', '5m'],
+            '7d': ['7d', '24h', '6h', '1h', '5m'],
+        }
+        retryable_statuses = {408, 429, 500, 502, 503, 504}
+        periods_to_try = fallback_order.get(time_period, [time_period, '1h', '5m'])
+        attempted_periods = []
+        last_error = None
+
+        for candidate_period in periods_to_try:
+            attempted_periods.append(candidate_period)
+
+            for attempt in range(1, 3 + 1):
+                try:
+                    response = self.session.get(
+                        url,
+                        params={
+                            'timePeriod': candidate_period,
+                            'v': int(time.time() * 1000)
+                        },
+                        headers=headers,
+                        timeout=30
+                    )
+                    response.raise_for_status()
+
+                    result = self._normalize_trending_response(response.json(), candidate_period)
+                    result['requestedTimePeriod'] = time_period
+                    result['fallbackUsed'] = candidate_period != time_period
+                    result['attemptedTimePeriods'] = attempted_periods.copy()
+                    return result
+                except requests.HTTPError as e:
+                    last_error = e
+                    status_code = e.response.status_code if e.response is not None else None
+
+                    if status_code in {403, 500} and attempt == 1:
+                        try:
+                            self.connect(sol_public_keys=[], evm_public_keys=[])
+                        except Exception:
+                            pass
+
+                    if status_code not in retryable_statuses or attempt >= 3:
+                        break
+
+                    time.sleep(0.4 * attempt)
+                except requests.RequestException as e:
+                    last_error = e
+                    if attempt >= 3:
+                        break
+                    time.sleep(0.4 * attempt)
+
+        raise Exception(
+            f"Failed to get trending tokens after trying {attempted_periods}: {last_error}"
+        )
     
     def get_token_info(self, token_address: str) -> Dict:
         """
