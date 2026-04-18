@@ -10,7 +10,7 @@ setup(
     author="ChipaDevTeam",
     author_email="",
     url="https://github.com/ChipaDevTeam/AxiomTradeAPI-py",
-    packages=find_packages(),
+    packages=find_packages(include=["axiomtradeapi", "axiomtradeapi.*"]),
     install_requires=[
         "websockets>=10.0",
         "python-dotenv",
