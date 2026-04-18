@@ -94,6 +94,7 @@ class AxiomTradeClient:
             'sec-fetch-site': 'same-site'
         }
         self.session.headers.update(self.base_headers)
+        self._session_bootstrapped = False
 
         # Sync session with auth manager if tokens exist
         if self.auth_manager.tokens:
@@ -427,8 +428,28 @@ class AxiomTradeClient:
             'statusCode': status_code,
             'failingUrl': failing_url,
             'error': error_message,
+            'nextSteps': [
+                'Call client.connect() once before trending requests to initialize the browser-like session.',
+                'Retry with 1h or 5m after a short delay.',
+                'Refresh tokens or upgrade to the latest axiomtradeapi release.'
+            ],
         }
     
+    def _bootstrap_trending_session(self, force: bool = False) -> None:
+        """Initialize the browser-like session needed by some protected endpoints."""
+        if self._session_bootstrapped and not force:
+            return
+
+        try:
+            self.connect(
+                token_address='8P5kBTzvG7xyjTZRzi4ftzpy6mnL74AHLtHDqyDq44ST',
+                sol_public_keys=[],
+                evm_public_keys=[]
+            )
+            self._session_bootstrapped = True
+        except Exception as exc:
+            self.logger.debug(f"Trending session bootstrap failed: {exc}")
+
     def get_trending_tokens(self, time_period: str = '1h', raise_on_error: bool = False, max_cache_age_seconds: int = 900) -> Dict:
         """
         Get trending meme tokens from the current v2 endpoint.
@@ -471,8 +492,12 @@ class AxiomTradeClient:
         headers = dict(self.base_headers)
         headers.update({
             'Referer': 'https://axiom.trade/',
-            'priority': 'u=1, i'
+            'priority': 'u=1, i',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
         })
+
+        self._bootstrap_trending_session()
 
         fallback_order = {
             '5m': ['5m', '1h'],
@@ -539,7 +564,7 @@ class AxiomTradeClient:
                         if status_code in {403, 500, 502, 503} and not initialized_session:
                             initialized_session = True
                             try:
-                                self.connect(sol_public_keys=[], evm_public_keys=[])
+                                self._bootstrap_trending_session(force=True)
                             except Exception:
                                 pass
 
