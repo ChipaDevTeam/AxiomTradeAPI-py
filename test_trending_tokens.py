@@ -1,11 +1,13 @@
 from axiomtradeapi import AxiomTradeClient
+from dotenv import load_dotenv
+import os
 
-EMAIL = "."
-PASSWORD = "." 
+# Load environment variables from .env file
+load_dotenv()
 
 client = AxiomTradeClient(
-    username=EMAIL,
-    password=PASSWORD
+    username=os.getenv("email"),
+    password=os.getenv("password")
 )
 
 # Automatically logs in if no saved session exists
