@@ -147,6 +147,9 @@ Our documentation covers everything from basic setup to advanced trading strateg
 | [🤖 **Trading Bots**](https://chipadevteam.github.io/AxiomTradeAPI-py/trading-bots/) | Automated strategies, bot frameworks | Advanced |
 | [⚡ **Performance**](https://chipadevteam.github.io/AxiomTradeAPI-py/performance/) | Optimization, scaling, monitoring | Advanced |
 | [🛡️ **Security**](https://chipadevteam.github.io/AxiomTradeAPI-py/security/) | Best practices, secure deployment | All Levels |
+| [📈 **Trending Tokens V2**](https://chipadevteam.github.io/AxiomTradeAPI-py/trending-tokens-v2/) | New trending endpoint and normalized responses | Intermediate |
+| [🚑 **Trending Troubleshooting**](https://chipadevteam.github.io/AxiomTradeAPI-py/trending-troubleshooting/) | Solve 404 and 500 trending errors fast | All Levels |
+| [📝 **Release Notes 1.1.3**](https://chipadevteam.github.io/AxiomTradeAPI-py/release-1-1-3/) | Latest reliability updates | All Levels |
 
 ## 🏆 Professional Use Cases
 

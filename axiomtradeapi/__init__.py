@@ -3,6 +3,6 @@ from axiomtradeapi.auth.login import AxiomAuth
 from axiomtradeapi.websocket._client import AxiomTradeWebSocketClient
 
 # Version
-__version__ = "1.1.2"
+__version__ = "1.1.3"
 
 __all__ = ['AxiomTradeClient', 'AxiomAuth', 'AxiomTradeWebSocketClient', '__version__', 'quick_login_and_get_trending', 'get_trending_with_token']

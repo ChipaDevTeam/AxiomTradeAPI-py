@@ -71,11 +71,32 @@ print("attempted:", result.get("attemptedTimePeriods"))
 
 ---
 
+## Structured error handling in the latest release
+
+If the server remains unavailable even after retries and host failover, the SDK now returns a safe result object instead of crashing by default.
+
+Example keys:
+
+- success
+- serviceAvailable
+- error
+- statusCode
+- failingUrl
+- attemptedTimePeriods
+- attemptedUrls
+
+You can still opt into strict exceptions when needed:
+
+```python
+result = client.get_trending_tokens("1h", raise_on_error=True)
+```
+
 ## If issues continue
 
 1. Verify your access token and refresh token are valid
 2. Upgrade to the latest package release
 3. Try 1h or 5m first to confirm upstream availability
 4. Retry after a short delay if the Axiom API is unstable
+5. Inspect the returned error and attemptedUrls fields for diagnostics
 
 If your bot depends on strict timeframe fidelity, check fallbackUsed and handle that case explicitly.

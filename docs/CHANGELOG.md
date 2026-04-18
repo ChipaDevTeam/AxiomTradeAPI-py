@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2026-04-18
+
+### Added
+- Multi-host failover for trending requests across current Axiom API domains
+- Cached trending response fallback for temporary upstream outages
+- Structured trending error payloads with status code, failing URL, and attempted endpoints
+- New documentation pages for trending v2 usage and troubleshooting
+
+### Changed
+- Trending endpoint handling now prefers graceful recovery over unhandled exceptions
+- Improved diagnostics for intermittent 500 and 404 issues
+
+### Fixed
+- User-reported failures where both 1h and 5m trending requests returned 500 errors
+- Generic exception output replaced with actionable diagnostics and safe fallback results
+
 ## [1.0.3] - 2025-09-03
 
 ### Added
