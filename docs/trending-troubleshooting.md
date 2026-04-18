@@ -23,7 +23,9 @@ The latest release adds:
 
 - automatic retries
 - session reinitialization when needed
+- browser-style session bootstrap before trending requests
 - fallback to a working time period
+- structured diagnostic responses when the service is fully unavailable
 
 ---
 

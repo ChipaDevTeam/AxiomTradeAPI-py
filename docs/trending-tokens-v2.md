@@ -95,6 +95,12 @@ Because the upstream payload is array-based and may evolve, the SDK also preserv
 
 ---
 
+## Automatic session initialization
+
+The client now attempts a browser-style bootstrap automatically before trending calls. This reduces failures in environments where Axiom expects the user to be registered as an active browser session.
+
+You can still call client.connect manually if you want to prewarm the session yourself.
+
 ## Best practice
 
 For production bots, prefer checking fallbackUsed before making timeframe-sensitive decisions:

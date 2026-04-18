@@ -88,7 +88,7 @@ asyncio.run(monitor_tokens())
 |----------|---------|
 | [📈 **Trending Tokens V2**](./trending-tokens-v2/) | New endpoint usage, normalized payloads, and fallback behavior |
 | [🚑 **Trending Troubleshooting**](./trending-troubleshooting/) | Fixes for intermittent 404 and 500 trending errors |
-| [📝 **Release Notes 1.1.3**](./release-1-1-3/) | Details of the latest reliability improvements |
+| [📝 **Release Notes 1.1.4**](./release-1-1-4/) | Details of the latest reliability improvements |
 
 ---
 

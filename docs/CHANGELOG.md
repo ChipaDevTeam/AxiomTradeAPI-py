@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.4] - 2026-04-18
+
+### Added
+- Automatic browser-session bootstrap before trending calls
+- Suggested recovery steps in the returned trending error payload
+
+### Changed
+- Trending requests now proactively initialize the protected session flow used by the web app
+- Better recovery for users who hit repeated 500 errors on both 1h and 5m
+
 ## [1.1.3] - 2026-04-18
 
 ### Added
