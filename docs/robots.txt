@@ -12,7 +12,7 @@ User-agent: Slurp
 Allow: /
 
 # Sitemap location
-Sitemap: https://vigowalker.github.io/AxiomTradeAPI-py-1/sitemap.xml
+Sitemap: https://chipadevteam.github.io/AxiomTradeAPI-py/sitemap.xml
 
 # Crawl delay (optional)
 Crawl-delay: 1
