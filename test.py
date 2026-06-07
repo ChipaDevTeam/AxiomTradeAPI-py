@@ -202,6 +202,8 @@ async def main():
             log_level=logging.INFO
         )
         
+        ws_client.connect()  # Connect to WebSocket server
+        
         # Subscribe to new token pairs
         logger.info("Subscribing to new token pairs...")
         success = await ws_client.subscribe_new_tokens(handle_new_pairs)
