@@ -262,6 +262,16 @@ For support:
 - [Authentication Guide](../docs/authentication.md)
 - [Telegram Bot API](https://core.telegram.org/bots/api)
 
+## ✍️ Build These Bots Faster with ChipaEditor
+
+**[ChipaEditor](https://chipaeditor.com/?utm_source=code&utm_medium=example&utm_campaign=axiomtradeapi&utm_term=advanced&utm_content=examples_readme)** is the AI-powered code editor made for DeFi developers. Get AI completions for Solana trading patterns, one-click bot deployment, and built-in DeFi debugging.
+
+👉 **[Try ChipaEditor Free →](https://chipaeditor.com/?utm_source=code&utm_medium=example&utm_campaign=axiomtradeapi&utm_term=advanced&utm_content=try_free)**
+
+## 🔗 Ready to Trade?
+
+Deploy your bot and **[start trading on Axiom →](https://axiom.trade/@chipadev)**
+
 ---
 
 *Built with ❤️ for the Solana community*

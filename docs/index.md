@@ -12,6 +12,8 @@
 
 [![Community](https://img.shields.io/badge/Join-Community-blue?logo=discord&logoColor=white)](https://chipatrade.com/community)
 [![Professional Services](https://img.shields.io/badge/Professional-Services-green)](https://chipatrade.com/services/bot-development)
+[![Trade on Axiom](https://img.shields.io/badge/Trade%20on-Axiom-blue)](https://axiom.trade/@chipadev)
+[![ChipaEditor](https://img.shields.io/badge/Built%20with-ChipaEditor-orange)](https://chipaeditor.com/?utm_source=github&utm_medium=docs&utm_campaign=axiomtradeapi&utm_term=badge&utm_content=index)
 
 </div>
 
