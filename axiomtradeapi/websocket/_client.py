@@ -1,12 +1,29 @@
 import json
 import logging
 import os
-import websockets
 import asyncio
 import time
-import requests
 from typing import Optional, Callable, Dict, Any
-import inspect
+
+try:
+    from curl_cffi.requests import AsyncSession as CurlAsyncSession
+    CURL_CFFI_AVAILABLE = True
+except ImportError:
+    CURL_CFFI_AVAILABLE = False
+
+# Fallback to websockets if curl_cffi is not installed
+try:
+    import websockets
+    import inspect
+    WEBSOCKETS_AVAILABLE = True
+except ImportError:
+    WEBSOCKETS_AVAILABLE = False
+
+try:
+    import requests as _requests
+    REQUESTS_AVAILABLE = True
+except ImportError:
+    REQUESTS_AVAILABLE = False
 
 try:
     from websockets_proxy import proxy_connect
