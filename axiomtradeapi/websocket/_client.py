@@ -95,10 +95,10 @@ class AxiomTradeWebSocketClient:
                         f"Original error: {e1}. Fallback error: {e2}"
                     ) from e1
 
-    def _preflight(self, tokens) -> None:
+    def _preflight(self, tokens) -> dict:
         """
         Perform the HTTP pre-flight requests the browser makes before opening the WebSocket.
-        This warms up the Cloudflare session so the bare WebSocket connection is accepted.
+        Returns all cookies collected (including Cloudflare's __cf_bm) for use in the WS connection.
         """
         v = int(time.time() * 1000)
         common_headers = {
@@ -110,33 +110,38 @@ class AxiomTradeWebSocketClient:
             'sec-ch-ua-mobile': '?0',
             'sec-ch-ua-platform': '"Windows"',
         }
-        cookies = {
+        seed_cookies = {
             'auth-access-token': tokens.access_token,
             'auth-refresh-token': tokens.refresh_token,
         }
         if self.cf_clearance:
-            cookies['cf_clearance'] = self.cf_clearance
+            seed_cookies['cf_clearance'] = self.cf_clearance
+
         session = requests.Session()
-        try:
-            session.get(
-                f'https://api.axiom.trade/wo/server-time?v={v}',
-                headers={**common_headers, 'referer': 'https://axiom.trade/', 'sec-fetch-dest': 'empty', 'sec-fetch-mode': 'cors', 'sec-fetch-site': 'same-site'},
-                cookies=cookies,
-                timeout=10,
-            )
-            self.logger.debug("Pre-flight server-time OK")
-        except Exception as e:
-            self.logger.debug(f"Pre-flight server-time failed (non-fatal): {e}")
-        try:
-            session.get(
-                f'https://api6.axiom.trade/get-announcement?v={v}',
-                headers={**common_headers, 'referer': 'https://axiom.trade/', 'sec-fetch-dest': 'empty', 'sec-fetch-mode': 'cors', 'sec-fetch-site': 'same-site'},
-                cookies=cookies,
-                timeout=10,
-            )
-            self.logger.debug("Pre-flight announcement OK")
-        except Exception as e:
-            self.logger.debug(f"Pre-flight announcement failed (non-fatal): {e}")
+        # Seed the session jar so Cloudflare sees a consistent identity
+        for k, v_val in seed_cookies.items():
+            session.cookies.set(k, v_val, domain='axiom.trade')
+
+        for url, site in [
+            (f'https://api.axiom.trade/wo/server-time?v={v}', 'same-site'),
+            (f'https://api6.axiom.trade/get-announcement?v={v}', 'same-site'),
+        ]:
+            try:
+                session.get(
+                    url,
+                    headers={**common_headers, 'referer': 'https://axiom.trade/',
+                              'sec-fetch-dest': 'empty', 'sec-fetch-mode': 'cors',
+                              'sec-fetch-site': site},
+                    timeout=10,
+                )
+                self.logger.debug(f"Pre-flight OK: {url}")
+            except Exception as e:
+                self.logger.debug(f"Pre-flight failed (non-fatal): {url} — {e}")
+
+        # Return all cookies collected, including any __cf_bm set by Cloudflare
+        collected = {c.name: c.value for c in session.cookies}
+        self.logger.debug(f"Pre-flight cookies collected: {list(collected.keys())}")
+        return collected
 
     async def connect(self, is_token_price: bool = False) -> bool:
         """Connect to the WebSocket server."""
