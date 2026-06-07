@@ -35,6 +35,21 @@ AxiomTradeAPI-py is the **most comprehensive Python library** for Solana trading
 | 📈 **Market Data** | Comprehensive Solana market info | Price feeds, volume analysis |
 | 🛡️ **Risk Management** | Built-in trading safeguards | Position sizing, loss limits |
 
+## 🆕 What's New in v1.1.5
+
+- **Chrome TLS impersonation** via `curl_cffi` — WebSocket connections now bypass Cloudflare's bot detection by impersonating Chrome 136's exact TLS fingerprint. No more HTTP 502 errors.
+- **JWT-aware token refresh** — the SDK now reads the real `exp` claim from your access token and auto-refreshes before it expires (previously always assumed 1-hour lifetime, causing silent failures).
+- **Pre-flight HTTP warm-up** — mirrors browser behaviour before opening the WebSocket to establish the Cloudflare session correctly.
+- **Cluster fallback fixed** — automatically tries cluster3/5/7 if the primary cluster is unavailable.
+
+```bash
+pip install --upgrade axiomtradeapi
+```
+
+[📋 Full release notes →](https://chipadevteam.github.io/AxiomTradeAPI-py/release-1-1-5/)
+
+---
+
 ## 🚀 Quick Start
 
 ### Installation
@@ -150,6 +165,7 @@ Our documentation covers everything from basic setup to advanced trading strateg
 | [🤖 **Trading Bots**](https://chipadevteam.github.io/AxiomTradeAPI-py/trading-bots/) | Automated strategies, bot frameworks | Advanced |
 | [⚡ **Performance**](https://chipadevteam.github.io/AxiomTradeAPI-py/performance/) | Optimization, scaling, monitoring | Advanced |
 | [🛡️ **Security**](https://chipadevteam.github.io/AxiomTradeAPI-py/security/) | Best practices, secure deployment | All Levels |
+| [📝 **Release Notes 1.1.5**](https://chipadevteam.github.io/AxiomTradeAPI-py/release-1-1-5/) | Cloudflare bypass, auto token refresh | All Levels |
 
 ## 🏆 Professional Use Cases
 
