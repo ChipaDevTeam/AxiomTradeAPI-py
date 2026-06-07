@@ -264,16 +264,33 @@ class AuthManager:
         if auth_token and refresh_token:
             self._set_tokens(auth_token, refresh_token)
     
-    def _set_tokens(self, auth_token: str, refresh_token: str, 
+    def _parse_jwt_expiry(self, token: str):
+        """Extract exp claim from a JWT without verifying signature."""
+        try:
+            payload = token.split('.')[1]
+            payload += '=' * (-len(payload) % 4)
+            data = json.loads(base64.b64decode(payload))
+            exp = data.get('exp')
+            iat = data.get('iat')
+            return float(exp) if exp else None, float(iat) if iat else None
+        except Exception:
+            return None, None
+
+    def _set_tokens(self, auth_token: str, refresh_token: str,
                    expires_in: int = 3600, save_tokens: bool = True) -> None:
         """Set authentication tokens"""
         current_time = time.time()
-        
+
+        # Use the real JWT expiry if present so is_expired reflects actual token lifetime
+        jwt_exp, jwt_iat = self._parse_jwt_expiry(auth_token)
+        expires_at = jwt_exp if jwt_exp else current_time + expires_in
+        issued_at = jwt_iat if jwt_iat else current_time
+
         self.tokens = AuthTokens(
             access_token=auth_token,
             refresh_token=refresh_token,
-            expires_at=current_time + expires_in,
-            issued_at=current_time
+            expires_at=expires_at,
+            issued_at=issued_at,
         )
         
         # Update cookies
