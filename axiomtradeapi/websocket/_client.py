@@ -120,7 +120,7 @@ class AxiomTradeWebSocketClient:
         """Send a text message over whichever transport is active."""
         if self._curl_ws is not None:
             try:
-                self._curl_ws.send(data.encode(), 1)  # 1 = CURLWS_TEXT
+                await self._curl_ws.send(data.encode(), 1)  # 1 = CURLWS_TEXT
                 return
             except Exception:
                 pass
@@ -375,11 +375,10 @@ class AxiomTradeWebSocketClient:
                     await cb(content)
 
     async def _message_handler_curl(self) -> None:
-        """Message loop for curl_cffi WebSocket."""
-        loop = asyncio.get_event_loop()
+        """Message loop for curl_cffi AsyncWebSocket."""
         while self._curl_ws is not None:
             try:
-                data, _ = await loop.run_in_executor(None, self._curl_ws.recv)
+                data, _ = await self._curl_ws.recv()
                 if data:
                     await self._dispatch(data.decode('utf-8', errors='replace'))
             except Exception as e:
