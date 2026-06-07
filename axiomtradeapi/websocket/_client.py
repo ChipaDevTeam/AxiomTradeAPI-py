@@ -408,12 +408,13 @@ class AxiomTradeWebSocketClient:
 
     async def close(self):
         """Close the WebSocket connection."""
-        if self._curl_ws is not None:
+        if self._curl_ws_ctx is not None:
             try:
-                self._curl_ws.close()
+                await self._curl_ws_ctx.__aexit__(None, None, None)
             except Exception:
                 pass
             self._curl_ws = None
+            self._curl_ws_ctx = None
         if self.ws is not None:
             await self.ws.close()
             self.ws = None
