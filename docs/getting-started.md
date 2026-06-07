@@ -1115,3 +1115,11 @@ You're now ready to build sophisticated Solana trading applications with AxiomTr
 ---
 
 *Need professional help with your trading bot? Check out our [custom development services](https://shop.chipatrade.com/products/create-your-bot) for expert assistance.*
+
+---
+
+## ✍️ Code Smarter with ChipaEditor
+
+**[ChipaEditor](https://chipaeditor.com/?utm_source=code&utm_medium=example&utm_campaign=axiomtradeapi&utm_term=advanced&utm_content=getting_started_doc)** — The AI-powered editor built for DeFi developers. Write trading bots faster with Solana-aware AI completions and one-click deployment.
+
+👉 **[Try ChipaEditor Free →](https://chipaeditor.com/?utm_source=code&utm_medium=example&utm_campaign=axiomtradeapi&utm_term=advanced&utm_content=try_free)** | **[Trade on Axiom →](https://axiom.trade/@chipadev)**
