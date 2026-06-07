@@ -1,0 +1,60 @@
+CURL:
+
+curl ^"https://api.axiom.trade/wo/batched-wallet-token-accounts^" ^
+  -H ^"accept: application/json, text/plain, */*^" ^
+  -H ^"accept-language: en-US,en;q=0.9^" ^
+  -H ^"content-type: application/json^" ^
+  -b ^"auth-refresh-token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZWZyZXNoVG9rZW5JZCI6ImM1ODZmNzk2LWYxMDMtNDhhZi05M2EwLTQyYWFhMTQzYTZkNCIsImlhdCI6MTc3MTY3NDI3OH0.gN2r3sPmt8UJt5UVv-POxLx5MC0Xzpnb1gjf2PNGMfQ; cf_clearance=d5egLd.qQXb8.Zi68Y69xcxggwcyyNxUBp1sIVvaUS8-1780856942-1.2.1.1-ADD6uPKcR4rmZ.lVav5cmTv5AwQ15s.Jrv8ug8v4bWvyCn3AEtoB.mSo.waOL5AbQXG8RgY5oRJvktN_pPgzvmU8S1MMYxmV8t07IRffDB.nUweSlKiaTa2c9ksOvwn4KFgZDpkunolyR_W8CT40Gct8Lch3qlScCrDw7hFhldYRKXio4uVo3g5CS0anZ7QRz93s9OXaINMnuP.nQ.ua5T36wWyHecOI8kczMXQswDz1Ae_bsm5NGr1K1Lpm2eS0FBGmYq8t6dyZ6cFQ7XYVYTF4b.EYTt7AYIPV2ZAHowCblmkWprPCGVT0qoFX3GZi8wv_eU1MLctXOktWiSUqlg; auth-access-token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRoZW50aWNhdGVkVXNlcklkIjoiMWZiMTdjNjAtZGRiMC00NDhmLWE4MDktYmJmYmNiYWZiN2NiIiwic2NvcGUiOiJ3ZWIiLCJpYXQiOjE3ODA4NTcwMzcsImV4cCI6MTc4MDg1Nzk5N30.lns8ZIOArG1A_uJ_L2jPw0GBh85jupZ23Jq3pr5BMxM; OClmoOot=A8LGWqOeAQAAZFID-VcbNnkYw9lVezhHGq01E3cN1h-rur4lVULtU601gLwvAcnvMMsAAAAAAAAAAAAAAAAAAA^|1^|0^|adb59a4c3214e3f4eb1b9dc8e68496220271f456; __cf_bm=4I4fMB_CHv4uYxLm0fE578QhS0y6HDTq5oE.goZT_zM-1780857095-1.0.1.1-2ieWIMoakTKvdSAKAIUsIKjspZGxUc2rUoh1UbmNF8qvuBrZwoU5LZldnAJNQsgJvCWQq4OiRjsYreWk1zmwssMXmF1Xi6kTbqe4KwgR9vw^" ^
+  -H ^"origin: https://axiom.trade^" ^
+  -H ^"priority: u=1, i^" ^
+  -H ^"referer: https://axiom.trade/^" ^
+  -H ^"sec-ch-ua: ^\^"Opera GX^\^";v=^\^"131^\^", ^\^"Not.A/Brand^\^";v=^\^"8^\^", ^\^"Chromium^\^";v=^\^"147^\^"^" ^
+  -H ^"sec-ch-ua-mobile: ?0^" ^
+  -H ^"sec-ch-ua-platform: ^\^"Windows^\^"^" ^
+  -H ^"sec-fetch-dest: empty^" ^
+  -H ^"sec-fetch-mode: cors^" ^
+  -H ^"sec-fetch-site: same-site^" ^
+  -H ^"user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 OPR/131.0.0.0 (Edition std-2)^" ^
+  --data-raw ^"^{^\^"publicKeys^\^":^[^\^"TBz4rsUXYNzpPiieiBotoBtDsCUirboKnVzFpjNMiTU^\^"^],^\^"v^\^":1780857102253^}^"
+
+
+
+RESPONSE
+
+{
+    "TBz4rsUXYNzpPiieiBotoBtDsCUirboKnVzFpjNMiTU": {
+        "tokenAccounts": [
+            {
+                "tokenAddress": "H1hHcmt9gHr63nr19zhNLununXCCeTnDTEhBt9u1pump",
+                "tokenAccountAddress": "8EVi5kQikbVCa2Y2E263ekyQk2w8fgP2gmQYD8tmnE5g",
+                "tokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+                "balanceRaw": "0"
+            },
+            {
+                "tokenAddress": "3zuXMDwcdqBtiEh4sYmNpdpiSnJh2Kt8XYRunBJ5pump",
+                "tokenAccountAddress": "BrLm7eF4eTQan5ryxA3bt1sxBbXHSA4UsHijthmsYAos",
+                "tokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+                "balanceRaw": "0"
+            },
+            {
+                "tokenAddress": "27G8MtK7VtTcCHkpASjSDdkWWYfoqT6ggEuKidVJidD4",
+                "tokenAccountAddress": "GMEtwD9vttVuQeyncUXNiZHAnQFdJPDvJixsz1cXpFWf",
+                "tokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+                "balanceRaw": "0"
+            },
+            {
+                "tokenAddress": "XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN",
+                "tokenAccountAddress": "9C8VU6EiLVtBbXsctyG5gafEgCDF6wB7A2DfqC4kHdzr",
+                "tokenProgram": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+                "balanceRaw": "0"
+            },
+            {
+                "tokenAddress": "7Qw6VfupmeKioYj5y2JG3yERrH8dpstZ7eXWsVxVWpQT",
+                "tokenAccountAddress": "GaYsRAzEJHU3wP5yBavFLSmcqYpMacvpAe66gfFJnKj1",
+                "tokenProgram": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+                "balanceRaw": "0"
+            }
+        ],
+        "slot": 424948527
+    }
+}

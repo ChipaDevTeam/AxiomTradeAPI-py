@@ -1,7 +1,11 @@
 """
-Test websocket compatibility for different websockets library versions.
-Tests that the _connect_with_headers method works with both websockets 10.x (extra_headers)
-and websockets 13+ (additional_headers).
+Test WebSocket client compatibility with v1.1.5 curl_cffi architecture.
+
+In v1.1.5 the WebSocket client was rewritten to use curl_cffi with
+impersonate="chrome136" to bypass Cloudflare TLS fingerprinting.
+The old _connect_with_headers / self.ws interface was removed;
+the live connection object is stored in self._curl_ws and callbacks
+are stored in self._callbacks.
 """
 import asyncio
 import unittest
@@ -9,154 +13,148 @@ from unittest.mock import Mock, AsyncMock, patch, MagicMock
 import sys
 import os
 
-# Add parent directory to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from axiomtradeapi.websocket._client import AxiomTradeWebSocketClient
 
 
-class TestWebSocketCompatibility(unittest.TestCase):
-    """Test WebSocket connection compatibility with different websockets versions."""
+def _make_mock_auth_manager(access_token="test_access_token", refresh_token="test_refresh_token"):
+    mock_auth = Mock()
+    mock_auth.ensure_valid_authentication.return_value = True
+    mock_tokens = Mock()
+    mock_tokens.access_token = access_token
+    mock_tokens.refresh_token = refresh_token
+    mock_auth.get_tokens.return_value = mock_tokens
+    mock_auth.tokens = mock_tokens
+    return mock_auth
+
+
+class TestWebSocketClientCreation(unittest.TestCase):
+    """Client creation and interface smoke tests."""
 
     def setUp(self):
-        """Set up test fixtures."""
-        # Create a mock auth manager
-        self.mock_auth_manager = Mock()
-        self.mock_auth_manager.ensure_valid_authentication.return_value = True
-        
-        # Create mock tokens
-        mock_tokens = Mock()
-        mock_tokens.access_token = "test_access_token"
-        mock_tokens.refresh_token = "test_refresh_token"
-        self.mock_auth_manager.get_tokens.return_value = mock_tokens
-        
-        # Create client
-        self.client = AxiomTradeWebSocketClient(self.mock_auth_manager)
+        self.mock_auth = _make_mock_auth_manager()
+        self.client = AxiomTradeWebSocketClient(self.mock_auth)
 
-    def test_connect_with_additional_headers(self):
-        """Test that connection works with additional_headers (websockets 13+)."""
-        async def run_test():
+    def test_client_has_required_methods(self):
+        self.assertTrue(hasattr(self.client, 'subscribe_new_tokens'))
+        self.assertTrue(hasattr(self.client, 'subscribe_wallet_transactions'))
+        self.assertTrue(hasattr(self.client, 'start'))
+        self.assertTrue(hasattr(self.client, 'close'))
+
+    def test_curl_ws_starts_as_none(self):
+        self.assertIsNone(self.client._curl_ws)
+
+    def test_callbacks_dict_exists(self):
+        self.assertIsInstance(self.client._callbacks, dict)
+
+    def test_no_legacy_connect_with_headers(self):
+        """_connect_with_headers was removed in v1.1.5 — _connect_curl is the primary path."""
+        self.assertFalse(hasattr(self.client, '_connect_with_headers'))
+        self.assertTrue(hasattr(self.client, '_connect_curl'))
+
+
+class TestWebSocketCurlCffiConnection(unittest.TestCase):
+    """Test that _connect_curl stores the WebSocket in _curl_ws."""
+
+    def setUp(self):
+        self.mock_auth = _make_mock_auth_manager()
+        self.client = AxiomTradeWebSocketClient(self.mock_auth)
+
+    def test_connect_curl_stores_ws(self):
+        async def run():
             mock_ws = AsyncMock()
-            
-            with patch('axiomtradeapi.websocket._client.websockets.connect', new=AsyncMock(return_value=mock_ws)) as mock_connect:
-                # Test the helper method directly
-                result = await self.client._connect_with_headers("wss://test.example.com", {"Test": "Header"})
-                
-                # Verify connect was called with additional_headers
-                mock_connect.assert_called_once_with("wss://test.example.com", additional_headers={"Test": "Header"})
-                self.assertEqual(result, mock_ws)
-        
-        asyncio.run(run_test())
+            mock_ws.recv = AsyncMock(return_value=(b'{"type":"ping"}', None))
 
-    def test_connect_fallback_to_extra_headers(self):
-        """Test that connection falls back to extra_headers when additional_headers is not available."""
-        async def run_test():
+            mock_ctx = MagicMock()
+            mock_ctx.__aenter__ = AsyncMock(return_value=mock_ws)
+            mock_ctx.__aexit__ = AsyncMock(return_value=False)
+
+            mock_session = MagicMock()
+            mock_session.get = AsyncMock(return_value=MagicMock(status_code=200))
+            mock_session.ws_connect = Mock(return_value=mock_ctx)
+            mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session.__aexit__ = AsyncMock(return_value=False)
+
+            with patch('axiomtradeapi.websocket._client.CurlAsyncSession',
+                       return_value=mock_session):
+                tokens = {"access_token": "tok", "refresh_token": "ref"}
+                connected = await self.client._connect_curl(tokens, [self.client.ws_url])
+
+            self.assertTrue(connected)
+            self.assertIs(self.client._curl_ws, mock_ws)
+
+        asyncio.run(run())
+
+    def test_connect_curl_tries_fallback_urls(self):
+        """On failure of first URL, _connect_curl should try the next."""
+        async def run():
             mock_ws = AsyncMock()
-            
-            # Mock the client to simulate websockets 10.x (only extra_headers available)
-            self.client._uses_additional_headers = False
-            self.client._uses_extra_headers = True
-            
-            async def mock_connect_impl(url, **kwargs):
-                # Simulate websockets 10.x behavior: reject additional_headers, accept extra_headers
-                if 'additional_headers' in kwargs:
-                    raise TypeError("connect() got an unexpected keyword argument 'additional_headers'")
-                elif 'extra_headers' in kwargs:
-                    return mock_ws
-                else:
-                    raise ValueError("No headers provided")
-            
-            with patch('axiomtradeapi.websocket._client.websockets.connect', new=mock_connect_impl):
-                # Test the helper method
-                result = await self.client._connect_with_headers("wss://test.example.com", {"Test": "Header"})
-                
-                # Verify we got the mock websocket back (meaning extra_headers worked)
-                self.assertEqual(result, mock_ws)
-        
-        asyncio.run(run_test())
+            mock_ctx = MagicMock()
+            mock_ctx.__aenter__ = AsyncMock(return_value=mock_ws)
+            mock_ctx.__aexit__ = AsyncMock(return_value=False)
 
-    def test_connect_reraises_other_typeerror(self):
-        """Test that other TypeErrors are re-raised."""
-        async def run_test():
-            with patch('axiomtradeapi.websocket._client.websockets.connect') as mock_connect:
-                # Raise a different TypeError that's not about additional_headers
-                mock_connect.side_effect = TypeError("Some other error")
-                
-                # Test the helper method - should raise the TypeError
-                with self.assertRaises(TypeError) as context:
-                    await self.client._connect_with_headers("wss://test.example.com", {"Test": "Header"})
-                
-                self.assertIn("Some other error", str(context.exception))
-        
-        asyncio.run(run_test())
+            call_count = {"n": 0}
 
-    def test_full_connect_uses_compatibility_method(self):
-        """Test that the full connect() method uses the compatibility helper."""
-        async def run_test():
-            mock_ws = AsyncMock()
-            
-            with patch.object(self.client, '_connect_with_headers', new=AsyncMock(return_value=mock_ws)) as mock_helper:
-                # Call the main connect method
-                result = await self.client.connect()
-                
-                # Verify the helper was called
-                mock_helper.assert_called_once()
-                self.assertTrue(result)
-                self.assertEqual(self.client.ws, mock_ws)
-        
-        asyncio.run(run_test())
+            def mock_ws_connect(url, **kwargs):
+                call_count["n"] += 1
+                if call_count["n"] == 1:
+                    raise Exception("First URL failed")
+                return mock_ctx
 
-    def test_alternative_url_uses_compatibility_method(self):
-        """Test that alternative URL connection also uses the compatibility helper."""
-        async def run_test():
-            mock_ws = AsyncMock()
-            
-            # Change the URL to trigger the alternative URL path
-            self.client.ws_url = "wss://cluster-usc2.axiom.trade/"
-            
-            with patch.object(self.client, '_connect_with_headers') as mock_helper:
-                # First call fails, second call succeeds
-                mock_helper.side_effect = [
-                    Exception("Connection failed"),
-                    mock_ws
-                ]
-                
-                # Call the main connect method
-                result = await self.client.connect()
-                
-                # Verify the helper was called twice (once for primary, once for alternative)
-                self.assertEqual(mock_helper.call_count, 2)
-                self.assertTrue(result)
-                self.assertEqual(self.client.ws, mock_ws)
-        
-        asyncio.run(run_test())
+            mock_session = MagicMock()
+            mock_session.get = AsyncMock(return_value=MagicMock(status_code=200))
+            mock_session.ws_connect = mock_ws_connect
+            mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session.__aexit__ = AsyncMock(return_value=False)
 
-    def test_fallback_when_version_not_detected(self):
-        """Test that the fallback mechanism works when version detection fails."""
-        async def run_test():
-            mock_ws = AsyncMock()
-            
-            # Simulate version detection failure
-            self.client._uses_additional_headers = False
-            self.client._uses_extra_headers = False
-            
-            async def mock_connect_impl(url, **kwargs):
-                # First call with additional_headers fails, second with extra_headers succeeds
-                if 'additional_headers' in kwargs:
-                    raise TypeError("connect() got an unexpected keyword argument 'additional_headers'")
-                elif 'extra_headers' in kwargs:
-                    return mock_ws
-                else:
-                    raise ValueError("No headers provided")
-            
-            with patch('axiomtradeapi.websocket._client.websockets.connect', new=mock_connect_impl):
-                # Test the helper method
-                result = await self.client._connect_with_headers("wss://test.example.com", {"Test": "Header"})
-                
-                # Verify we got the mock websocket back (meaning fallback to extra_headers worked)
-                self.assertEqual(result, mock_ws)
-        
-        asyncio.run(run_test())
+            with patch('axiomtradeapi.websocket._client.CurlAsyncSession',
+                       return_value=mock_session):
+                tokens = {"access_token": "tok", "refresh_token": "ref"}
+                urls = [self.client.ws_url, "wss://cluster3.axiom.trade/"]
+                connected = await self.client._connect_curl(tokens, urls)
+
+            self.assertTrue(connected)
+            self.assertEqual(call_count["n"], 2)
+
+        asyncio.run(run())
+
+
+class TestWebSocketSubscribeCallbacks(unittest.TestCase):
+    """Test that subscribe methods register callbacks in _callbacks."""
+
+    def setUp(self):
+        self.mock_auth = _make_mock_auth_manager()
+        self.client = AxiomTradeWebSocketClient(self.mock_auth)
+
+    def test_subscribe_new_tokens_registers_callback(self):
+        """subscribe_new_tokens stores callback under 'new_pairs' key."""
+        async def my_callback(tokens):
+            pass
+
+        async def run():
+            # Patch _ensure_connected so no real network call is made
+            with patch.object(self.client, '_ensure_connected', new=AsyncMock(return_value=True)):
+                with patch.object(self.client, '_send', new=AsyncMock()):
+                    await self.client.subscribe_new_tokens(my_callback)
+
+        asyncio.run(run())
+        self.assertIs(self.client._callbacks.get('new_pairs'), my_callback)
+
+    def test_subscribe_wallet_transactions_registers_callback(self):
+        async def my_callback(data):
+            pass
+
+        wallet = "BJBgjyDZx5FSsyJf6bFKVXuJV7DZY9PCSMSi5d9tcEVh"
+
+        async def run():
+            with patch.object(self.client, '_ensure_connected', new=AsyncMock(return_value=True)):
+                with patch.object(self.client, '_send', new=AsyncMock()):
+                    await self.client.subscribe_wallet_transactions(wallet, my_callback)
+
+        asyncio.run(run())
+        expected_key = f"wallet_{wallet}"
+        self.assertIs(self.client._callbacks.get(expected_key), my_callback)
 
 
 if __name__ == '__main__':
