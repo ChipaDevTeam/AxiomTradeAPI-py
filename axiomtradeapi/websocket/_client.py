@@ -2,6 +2,8 @@ import json
 import logging
 import websockets
 import asyncio
+import time
+import requests
 from typing import Optional, Callable, Dict, Any
 import inspect
 
@@ -91,6 +93,47 @@ class AxiomTradeWebSocketClient:
                         f"Original error: {e1}. Fallback error: {e2}"
                     ) from e1
 
+    def _preflight(self, tokens) -> None:
+        """
+        Perform the HTTP pre-flight requests the browser makes before opening the WebSocket.
+        This warms up the Cloudflare session so the bare WebSocket connection is accepted.
+        """
+        v = int(time.time() * 1000)
+        common_headers = {
+            'accept': '*/*',
+            'accept-language': 'en,es-CL;q=0.9,es-419;q=0.8,es;q=0.7,fr;q=0.6',
+            'origin': 'https://axiom.trade',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
+            'sec-ch-ua': '"Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"',
+        }
+        cookies = {
+            'auth-access-token': tokens.access_token,
+            'auth-refresh-token': tokens.refresh_token,
+        }
+        session = requests.Session()
+        try:
+            session.get(
+                f'https://api.axiom.trade/wo/server-time?v={v}',
+                headers={**common_headers, 'referer': 'https://axiom.trade/', 'sec-fetch-dest': 'empty', 'sec-fetch-mode': 'cors', 'sec-fetch-site': 'same-site'},
+                cookies=cookies,
+                timeout=10,
+            )
+            self.logger.debug("Pre-flight server-time OK")
+        except Exception as e:
+            self.logger.debug(f"Pre-flight server-time failed (non-fatal): {e}")
+        try:
+            session.get(
+                f'https://api6.axiom.trade/get-announcement?v={v}',
+                headers={**common_headers, 'referer': 'https://axiom.trade/', 'sec-fetch-dest': 'empty', 'sec-fetch-mode': 'cors', 'sec-fetch-site': 'same-site'},
+                cookies=cookies,
+                timeout=10,
+            )
+            self.logger.debug("Pre-flight announcement OK")
+        except Exception as e:
+            self.logger.debug(f"Pre-flight announcement failed (non-fatal): {e}")
+
     async def connect(self, is_token_price: bool = False) -> bool:
         """Connect to the WebSocket server."""
         # Ensure we have valid authentication
@@ -98,23 +141,25 @@ class AxiomTradeWebSocketClient:
             self.logger.error("WebSocket authentication failed - unable to obtain valid tokens")
             self.logger.error("Please login with valid email and password")
             return False
-        
+
         # Get tokens from auth manager
         tokens = self.auth_manager.get_tokens()
         if not tokens:
             self.logger.error("No authentication tokens available")
             return False
-        
-        base_headers = {
+
+        # Warm up the Cloudflare session with the same HTTP pre-flights the browser makes
+        self.logger.info("Running pre-flight requests...")
+        self._preflight(tokens)
+
+        # WebSocket connects WITHOUT cookies — matching exact browser behaviour
+        ws_headers = {
             'Origin': 'https://axiom.trade',
             'Cache-Control': 'no-cache',
             'Accept-Language': 'en,es-CL;q=0.9,es-419;q=0.8,es;q=0.7,fr;q=0.6',
             'Pragma': 'no-cache',
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
         }
-
-        cookie_header = f"auth-access-token={tokens.access_token}; auth-refresh-token={tokens.refresh_token}"
-        headers_with_cookie = {**base_headers, 'Cookie': cookie_header}
 
         current_url = self.ws_url_token_price if is_token_price else self.ws_url
 
@@ -126,16 +171,14 @@ class AxiomTradeWebSocketClient:
                 "wss://cluster7.axiom.trade/",
             ]
 
-        # Try each URL with cookies first, then without cookies (matching browser behaviour)
         for url in urls_to_try:
-            for headers, label in [(headers_with_cookie, "with auth"), (base_headers, "without auth")]:
-                try:
-                    self.logger.info(f"Attempting to connect to WebSocket: {url} ({label})")
-                    self.ws = await self._connect_with_headers(url, headers)
-                    self.logger.info(f"Connected to WebSocket server: {url} ({label})")
-                    return True
-                except Exception as e:
-                    self.logger.error(f"Failed {url} ({label}): {e}")
+            try:
+                self.logger.info(f"Attempting to connect to WebSocket: {url}")
+                self.ws = await self._connect_with_headers(url, ws_headers)
+                self.logger.info(f"Connected to WebSocket server: {url}")
+                return True
+            except Exception as e:
+                self.logger.error(f"Failed to connect to {url}: {e}")
 
         return False
 
