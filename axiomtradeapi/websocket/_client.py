@@ -105,58 +105,39 @@ class AxiomTradeWebSocketClient:
             self.logger.error("No authentication tokens available")
             return False
         
-        headers = {
+        base_headers = {
             'Origin': 'https://axiom.trade',
             'Cache-Control': 'no-cache',
-            'Accept-Language': 'en-US,en;q=0.9,es;q=0.8',
+            'Accept-Language': 'en,es-CL;q=0.9,es-419;q=0.8,es;q=0.7,fr;q=0.6',
             'Pragma': 'no-cache',
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
         }
-        
-        # Add authentication cookies from auth manager
+
         cookie_header = f"auth-access-token={tokens.access_token}; auth-refresh-token={tokens.refresh_token}"
-        headers["Cookie"] = cookie_header
-        
-        self.logger.debug(f"Connecting to WebSocket with headers: {headers}")
-        self.logger.debug(f"Using tokens: access_token length={len(tokens.access_token)}, refresh_token length={len(tokens.refresh_token)}")
-        
-        try:
-            if is_token_price:
-                current_url = self.ws_url_token_price
-            else:
-                current_url = self.ws_url
-            
-            # Try the primary URL first
-            self.logger.info(f"Attempting to connect to WebSocket: {current_url}")
-            self.ws = await self._connect_with_headers(current_url, headers)
-            self.logger.info("Connected to WebSocket server")
-            return True
-        except Exception as e:
-            if "HTTP 401" in str(e) or "401" in str(e):
-                self.logger.error("WebSocket authentication failed - invalid or missing tokens")
-                self.logger.error("Please check that your tokens are valid and not expired")
-                self.logger.error(f"Error details: {e}")
-                self.logger.error(f"Current tokens: {tokens}")
-            else:
-                self.logger.error(f"Failed to connect to WebSocket: {e}")
-                # Try fallback clusters if primary fails
-                if not is_token_price:
-                    fallback_urls = [
-                        "wss://cluster3.axiom.trade/",
-                        "wss://cluster5.axiom.trade/",
-                        "wss://cluster7.axiom.trade/",
-                    ]
-                    for alt_url in fallback_urls:
-                        if alt_url == current_url:
-                            continue
-                        try:
-                            self.logger.info(f"Trying fallback WebSocket URL: {alt_url}")
-                            self.ws = await self._connect_with_headers(alt_url, headers)
-                            self.logger.info(f"Connected to fallback WebSocket server: {alt_url}")
-                            return True
-                        except Exception as e2:
-                            self.logger.error(f"Fallback {alt_url} also failed: {e2}")
-            return False
+        headers_with_cookie = {**base_headers, 'Cookie': cookie_header}
+
+        current_url = self.ws_url_token_price if is_token_price else self.ws_url
+
+        urls_to_try = [current_url]
+        if not is_token_price:
+            urls_to_try += [
+                "wss://cluster3.axiom.trade/",
+                "wss://cluster5.axiom.trade/",
+                "wss://cluster7.axiom.trade/",
+            ]
+
+        # Try each URL with cookies first, then without cookies (matching browser behaviour)
+        for url in urls_to_try:
+            for headers, label in [(headers_with_cookie, "with auth"), (base_headers, "without auth")]:
+                try:
+                    self.logger.info(f"Attempting to connect to WebSocket: {url} ({label})")
+                    self.ws = await self._connect_with_headers(url, headers)
+                    self.logger.info(f"Connected to WebSocket server: {url} ({label})")
+                    return True
+                except Exception as e:
+                    self.logger.error(f"Failed {url} ({label}): {e}")
+
+        return False
 
     async def subscribe_new_tokens(self, callback: Callable[[Dict[str, Any]], None]):
         """Subscribe to new token updates."""
