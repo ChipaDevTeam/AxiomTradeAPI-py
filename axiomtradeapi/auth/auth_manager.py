@@ -211,11 +211,11 @@ class AuthManager:
     Manages authentication for Axiom Trade API
     Handles automatic login, token refresh, and session management
     """
-    
-    def __init__(self, username: str = None, password: str = None, 
+
+    def __init__(self, username: str = None, password: str = None,
                  auth_token: str = None, refresh_token: str = None,
                  storage_dir: str = None, use_saved_tokens: bool = True,
-                 proxies: Dict[str, str] = None):
+                 proxies: Dict[str, str] = None, cf_clearance: str = None):
         """
         Initialize AuthManager
         
@@ -233,6 +233,7 @@ class AuthManager:
         self.base_url = "https://axiom.trade"
         self.use_saved_tokens = use_saved_tokens
         self.proxies = proxies
+        self.cf_clearance = cf_clearance or os.environ.get("CF_CLEARANCE")
         
         # Setup logging
         self.logger = logging.getLogger(__name__)
@@ -512,8 +513,10 @@ class AuthManager:
         # Add cookies with both tokens (as shown in your curl)
         cookies = {
             'auth-refresh-token': self.tokens.refresh_token,
-            'auth-access-token': self.tokens.access_token
+            'auth-access-token': self.tokens.access_token,
         }
+        if self.cf_clearance:
+            cookies['cf_clearance'] = self.cf_clearance
         
         try:
             self.logger.info("Refreshing authentication tokens...")
