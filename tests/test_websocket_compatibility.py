@@ -153,7 +153,7 @@ class TestWebSocketSubscribeCallbacks(unittest.TestCase):
                     await self.client.subscribe_wallet_transactions(wallet, my_callback)
 
         asyncio.run(run())
-        expected_key = f"wallet_{wallet}"
+        expected_key = f"wallet_transactions_{wallet}"
         self.assertIs(self.client._callbacks.get(expected_key), my_callback)
 
 
