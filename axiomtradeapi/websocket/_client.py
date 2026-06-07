@@ -13,7 +13,7 @@ except ImportError:
     
 class AxiomTradeWebSocketClient:    
     def __init__(self, auth_manager, log_level=logging.INFO) -> None:
-        self.ws_url = "wss://cluster6.axiom.trade/"
+        self.ws_url = "wss://cluster9.axiom.trade//"
         self.ws_url_token_price = "wss://socket8.axiom.trade/"
         self.ws: Optional[websockets.WebSocketClientProtocol] = None
         
