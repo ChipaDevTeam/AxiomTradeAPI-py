@@ -157,23 +157,35 @@ class AxiomTradeWebSocketClient:
             self.logger.error("No authentication tokens available")
             return False
 
-        # Warm up the Cloudflare session with the same HTTP pre-flights the browser makes
+        # Warm up the Cloudflare session; capture __cf_bm and other cookies it sets
         self.logger.info("Running pre-flight requests...")
-        self._preflight(tokens)
+        preflight_cookies = self._preflight(tokens)
 
-        # WebSocket headers — cf_clearance is required for Cloudflare to accept the connection
+        # Build cookie header: auth tokens + cf_clearance + any __cf_bm from pre-flight
+        cookie_parts = {
+            'auth-access-token': tokens.access_token,
+            'auth-refresh-token': tokens.refresh_token,
+        }
+        if self.cf_clearance:
+            cookie_parts['cf_clearance'] = self.cf_clearance
+        else:
+            self.logger.warning("cf_clearance not set — WebSocket may be rejected by Cloudflare. "
+                                "Set CF_CLEARANCE in your .env (DevTools → Application → Cookies → cf_clearance)")
+        # Merge in Cloudflare cookies from pre-flight (e.g. __cf_bm)
+        for k, v in preflight_cookies.items():
+            if k not in cookie_parts:
+                cookie_parts[k] = v
+
+        cookie_header = '; '.join(f'{k}={v}' for k, v in cookie_parts.items())
+
         ws_headers = {
             'Origin': 'https://axiom.trade',
             'Cache-Control': 'no-cache',
             'Accept-Language': 'en,es-CL;q=0.9,es-419;q=0.8,es;q=0.7,fr;q=0.6',
             'Pragma': 'no-cache',
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
+            'Cookie': cookie_header,
         }
-        if self.cf_clearance:
-            ws_headers['Cookie'] = f"cf_clearance={self.cf_clearance}"
-        else:
-            self.logger.warning("cf_clearance not set — WebSocket may be rejected by Cloudflare. "
-                                "Get it from DevTools → Application → Cookies → cf_clearance and set CF_CLEARANCE in your .env")
 
         current_url = self.ws_url_token_price if is_token_price else self.ws_url
 
