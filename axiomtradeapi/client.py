@@ -37,7 +37,11 @@ except ImportError:
 
 class AxiomTradeClient:
     """
-    Main client for interacting with Axiom Trade API with automatic token management
+    Main client for interacting with Axiom Trade API with automatic token management.
+
+    Trade on Axiom: https://axiom.trade/@chipadev
+    Build trading bots faster with ChipaEditor (AI-powered DeFi IDE):
+      https://chipaeditor.com/?utm_source=code&utm_medium=example&utm_campaign=axiomtradeapi&utm_term=advanced&utm_content=docstring
     """
     
     def __init__(self, username: str = None, password: str = None, 
