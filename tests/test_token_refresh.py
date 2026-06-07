@@ -30,15 +30,15 @@ def test_token_refresh():
     print("=" * 50)
     
     # You can set these from environment variables or replace with your tokens
-    access_token = os.getenv('auth-access-token', 'your_access_token_here')
-    refresh_token = os.getenv('auth-refresh-token', 'your_refresh_token_here')
+    access_token = os.getenv('AXIOM_ACCESS_TOKEN', 'your_access_token_here')
+    refresh_token = os.getenv('AXIOM_REFRESH_TOKEN', 'your_refresh_token_here')
 
     if access_token == 'your_access_token_here' or refresh_token == 'your_refresh_token_here':
-        print("❌ Please set ACCESS_TOKEN and REFRESH_TOKEN environment variables")
+        print("❌ Please set AXIOM_ACCESS_TOKEN and AXIOM_REFRESH_TOKEN environment variables")
         print("   Or replace the tokens in this script with real ones")
         print("\nExample:")
-        print("   set ACCESS_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
-        print("   set REFRESH_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+        print("   set AXIOM_ACCESS_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
+        print("   set AXIOM_REFRESH_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
         return False
     
     try:
@@ -81,7 +81,7 @@ def test_token_refresh():
             use_saved_tokens=False
         )
         
-        if client.ensure_authenticated():
+        if client.auth_manager.ensure_valid_authentication():
             print("   ✅ Client authentication successful!")
             
             # Try to make an API call

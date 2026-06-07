@@ -24,14 +24,14 @@ def test_new_api_functions():
     
     # Initialize client
     client = AxiomTradeClient(
-        auth_token=os.getenv('auth-access-token'),
-        refresh_token=os.getenv('auth-refresh-token')
+        auth_token=os.getenv('AXIOM_ACCESS_TOKEN'),
+        refresh_token=os.getenv('AXIOM_REFRESH_TOKEN')
     )
-    
+
     # Test authentication
     print("\n🔐 Testing Authentication")
     print("-" * 40)
-    if client.ensure_authenticated():
+    if client.auth_manager.ensure_valid_authentication():
         print("✅ Authentication successful!")
     else:
         print("❌ Authentication failed!")
@@ -134,8 +134,8 @@ from axiomtradeapi.client import AxiomTradeClient
 import os
 
 client = AxiomTradeClient(
-    auth_token=os.getenv('auth-access-token'),
-    refresh_token=os.getenv('auth-refresh-token')
+    auth_token=os.getenv('AXIOM_ACCESS_TOKEN'),
+    refresh_token=os.getenv('AXIOM_REFRESH_TOKEN')
 )
 
 # Get detailed token information

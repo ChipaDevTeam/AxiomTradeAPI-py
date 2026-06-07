@@ -5,8 +5,8 @@ import os
 
 dotenv.load_dotenv()
 
-access_token = os.getenv('auth-access-token')
-refresh_token = os.getenv('auth-refresh-token')
+access_token = os.getenv('AXIOM_ACCESS_TOKEN')
+refresh_token = os.getenv('AXIOM_REFRESH_TOKEN')
 
 client = AxiomTradeClient(
     auth_token=access_token,
