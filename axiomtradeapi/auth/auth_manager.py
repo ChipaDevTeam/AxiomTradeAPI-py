@@ -484,14 +484,21 @@ class AuthManager:
     
     def refresh_tokens(self) -> bool:
         """
-        Refresh authentication tokens using the correct API endpoint
-        
+        Refresh authentication tokens using Chrome TLS impersonation (curl_cffi) to pass Cloudflare.
+
         Returns:
             bool: True if refresh successful, False otherwise
         """
         if not self.tokens or not self.tokens.refresh_token:
             self.logger.error("No refresh token available")
             return False
+
+        cookies = {
+            'auth-refresh-token': self.tokens.refresh_token,
+            'auth-access-token': self.tokens.access_token,
+        }
+        if self.cf_clearance:
+            cookies['cf_clearance'] = self.cf_clearance
 
         headers = {
             'accept': 'application/json, text/plain, */*',
@@ -500,75 +507,60 @@ class AuthManager:
             'origin': 'https://axiom.trade',
             'priority': 'u=1, i',
             'referer': 'https://axiom.trade/',
-            'sec-ch-ua': '"Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"Windows"',
             'sec-fetch-dest': 'empty',
             'sec-fetch-mode': 'cors',
             'sec-fetch-site': 'same-site',
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
         }
-        
-        # Add cookies with both tokens (as shown in your curl)
-        cookies = {
-            'auth-refresh-token': self.tokens.refresh_token,
-            'auth-access-token': self.tokens.access_token,
-        }
-        if self.cf_clearance:
-            cookies['cf_clearance'] = self.cf_clearance
-        
+
         try:
             self.logger.info("Refreshing authentication tokens...")
-            
-            # Use the exact endpoint from your curl command
-            refresh_url = 'https://api.axiom.trade/refresh-access-token'
-            response = requests.post(
-                refresh_url,
+            from curl_cffi import requests as cffi_requests
+            response = cffi_requests.post(
+                'https://api.axiom.trade/refresh-access-token',
                 headers=headers,
                 cookies=cookies,
                 timeout=30,
-                proxies=self.proxies
+                impersonate="chrome136",
             )
-            
+        except ImportError:
+            self.logger.warning("curl_cffi not available, falling back to requests for token refresh")
+            response = requests.post(
+                'https://api.axiom.trade/refresh-access-token',
+                headers=headers,
+                cookies=cookies,
+                timeout=30,
+                proxies=self.proxies,
+            )
+        except Exception as e:
+            self.logger.error(f"❌ Token refresh request failed: {e}")
+            return False
+
+        try:
             if response.status_code == 200:
-                # Extract new tokens from response cookies
                 new_auth_token = response.cookies.get('auth-access-token')
                 new_refresh_token = response.cookies.get('auth-refresh-token')
-                
+
                 if new_auth_token:
-                    # Use new refresh token if provided, otherwise keep the existing one
-                    refresh_token_to_use = new_refresh_token or self.tokens.refresh_token
-                    self._set_tokens(new_auth_token, refresh_token_to_use)
+                    self._set_tokens(new_auth_token, new_refresh_token or self.tokens.refresh_token)
                     self.logger.info("✅ Tokens refreshed successfully!")
                     return True
-                else:
-                    # Sometimes the response might be in JSON format
-                    try:
-                        response_data = response.json()
-                        new_auth_token = (response_data.get('accessToken') or 
-                                        response_data.get('auth-access-token') or
-                                        response_data.get('access_token'))
-                        new_refresh_token = (response_data.get('refreshToken') or 
-                                           response_data.get('auth-refresh-token') or
-                                           response_data.get('refresh_token'))
-                        
-                        if new_auth_token:
-                            refresh_token_to_use = new_refresh_token or self.tokens.refresh_token
-                            self._set_tokens(new_auth_token, refresh_token_to_use)
-                            self.logger.info("✅ Tokens refreshed successfully from JSON response!")
-                            return True
-                    except (json.JSONDecodeError, AttributeError):
-                        pass
-                    
-                    self.logger.error("❌ No new access token in refresh response")
-                    return False
+
+                try:
+                    data = response.json()
+                    new_auth_token = data.get('accessToken') or data.get('auth-access-token') or data.get('access_token')
+                    new_refresh_token = data.get('refreshToken') or data.get('auth-refresh-token') or data.get('refresh_token')
+                    if new_auth_token:
+                        self._set_tokens(new_auth_token, new_refresh_token or self.tokens.refresh_token)
+                        self.logger.info("✅ Tokens refreshed successfully!")
+                        return True
+                except Exception:
+                    pass
+
+                self.logger.error("❌ No new access token in refresh response")
+                return False
             else:
                 self.logger.error(f"❌ Token refresh failed: {response.status_code} - {response.text}")
                 return False
-                
-        except requests.exceptions.RequestException as e:
-            self.logger.error(f"❌ Token refresh request failed: {e}")
-            return False
         except Exception as e:
             self.logger.error(f"❌ Unexpected token refresh error: {e}")
             return False
