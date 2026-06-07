@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import websockets
 import asyncio
 import time
@@ -13,10 +14,11 @@ try:
 except ImportError:
     PROXY_SUPPORT = False
     
-class AxiomTradeWebSocketClient:    
-    def __init__(self, auth_manager, log_level=logging.INFO) -> None:
+class AxiomTradeWebSocketClient:
+    def __init__(self, auth_manager, log_level=logging.INFO, cf_clearance: str = None) -> None:
         self.ws_url = "wss://cluster9.axiom.trade/"
         self.ws_url_token_price = "wss://socket8.axiom.trade/"
+        self.cf_clearance = cf_clearance or os.environ.get("CF_CLEARANCE")
         self.ws: Optional[websockets.WebSocketClientProtocol] = None
         
         if not auth_manager:
@@ -112,6 +114,8 @@ class AxiomTradeWebSocketClient:
             'auth-access-token': tokens.access_token,
             'auth-refresh-token': tokens.refresh_token,
         }
+        if self.cf_clearance:
+            cookies['cf_clearance'] = self.cf_clearance
         session = requests.Session()
         try:
             session.get(
@@ -152,7 +156,7 @@ class AxiomTradeWebSocketClient:
         self.logger.info("Running pre-flight requests...")
         self._preflight(tokens)
 
-        # WebSocket connects WITHOUT cookies — matching exact browser behaviour
+        # WebSocket headers — cf_clearance is required for Cloudflare to accept the connection
         ws_headers = {
             'Origin': 'https://axiom.trade',
             'Cache-Control': 'no-cache',
@@ -160,6 +164,11 @@ class AxiomTradeWebSocketClient:
             'Pragma': 'no-cache',
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
         }
+        if self.cf_clearance:
+            ws_headers['Cookie'] = f"cf_clearance={self.cf_clearance}"
+        else:
+            self.logger.warning("cf_clearance not set — WebSocket may be rejected by Cloudflare. "
+                                "Get it from DevTools → Application → Cookies → cf_clearance and set CF_CLEARANCE in your .env")
 
         current_url = self.ws_url_token_price if is_token_price else self.ws_url
 
