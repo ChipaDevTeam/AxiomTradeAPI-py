@@ -3,6 +3,7 @@
 <div align="center">
 
 [![PyPI version](https://badge.fury.io/py/axiomtradeapi.svg)](https://badge.fury.io/py/axiomtradeapi)
+[![Version](https://img.shields.io/badge/version-1.1.5-blue)](https://chipadevteam.github.io/AxiomTradeAPI-py/release-1-1-5/)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Documentation](https://img.shields.io/badge/docs-available-brightgreen.svg)](https://chipadevteam.github.io/AxiomTradeAPI-py)
