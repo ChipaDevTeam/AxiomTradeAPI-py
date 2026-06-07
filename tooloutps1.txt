@@ -1,0 +1,4 @@
+{
+  "command": "cd \"d:\\chipa\\AxiomTradeAPI-py-1\"; & \".venv\\Scripts\\python.exe\" -m pip install --upgrade build twine 2>&1 | Select-Object -Last 3",
+  "description": "Install build tools in venv"
+}
