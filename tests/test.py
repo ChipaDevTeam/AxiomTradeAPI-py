@@ -26,7 +26,7 @@ async def main():
             # log_level=logging.DEBUG
         )
         
-        if client.is_authenticated():
+        if client.auth_manager.ensure_valid_authentication():
             print("✓ Client authenticated with tokens from .env")
             balance = client.GetBalance("BJBgjyDZx5FSsyJf6bFKVXuJV7DZY9PCSMSi5d9tcEVh")
             print(f"Balance: {balance}")
