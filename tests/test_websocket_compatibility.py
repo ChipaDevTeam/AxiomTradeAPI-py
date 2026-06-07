@@ -76,10 +76,13 @@ class TestWebSocketCurlCffiConnection(unittest.TestCase):
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session.__aexit__ = AsyncMock(return_value=False)
 
+            mock_tokens = Mock()
+            mock_tokens.access_token = "tok"
+            mock_tokens.refresh_token = "ref"
+
             with patch('axiomtradeapi.websocket._client.CurlAsyncSession',
                        return_value=mock_session):
-                tokens = {"access_token": "tok", "refresh_token": "ref"}
-                connected = await self.client._connect_curl(tokens, [self.client.ws_url])
+                connected = await self.client._connect_curl(mock_tokens, [self.client.ws_url])
 
             self.assertTrue(connected)
             self.assertIs(self.client._curl_ws, mock_ws)
@@ -108,11 +111,14 @@ class TestWebSocketCurlCffiConnection(unittest.TestCase):
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session.__aexit__ = AsyncMock(return_value=False)
 
+            mock_tokens = Mock()
+            mock_tokens.access_token = "tok"
+            mock_tokens.refresh_token = "ref"
+
             with patch('axiomtradeapi.websocket._client.CurlAsyncSession',
                        return_value=mock_session):
-                tokens = {"access_token": "tok", "refresh_token": "ref"}
                 urls = [self.client.ws_url, "wss://cluster3.axiom.trade/"]
-                connected = await self.client._connect_curl(tokens, urls)
+                connected = await self.client._connect_curl(mock_tokens, urls)
 
             self.assertTrue(connected)
             self.assertEqual(call_count["n"], 2)
