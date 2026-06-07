@@ -13,7 +13,7 @@ except ImportError:
     
 class AxiomTradeWebSocketClient:    
     def __init__(self, auth_manager, log_level=logging.INFO) -> None:
-        self.ws_url = "wss://cluster9.axiom.trade//"
+        self.ws_url = "wss://cluster9.axiom.trade/"
         self.ws_url_token_price = "wss://socket8.axiom.trade/"
         self.ws: Optional[websockets.WebSocketClientProtocol] = None
         
@@ -109,7 +109,7 @@ class AxiomTradeWebSocketClient:
             'Cache-Control': 'no-cache',
             'Accept-Language': 'en-US,en;q=0.9,es;q=0.8',
             'Pragma': 'no-cache',
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36 OPR/120.0.0.0',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
         }
         
         # Add authentication cookies from auth manager
@@ -138,16 +138,23 @@ class AxiomTradeWebSocketClient:
                 self.logger.error(f"Current tokens: {tokens}")
             else:
                 self.logger.error(f"Failed to connect to WebSocket: {e}")
-                # Try alternative URL if the primary one fails
-                if not is_token_price and "cluster-usc2" in self.ws_url:
-                    try:
-                        alternative_url = "wss://cluster3.axiom.trade/"
-                        self.logger.info(f"Trying alternative WebSocket URL: {alternative_url}")
-                        self.ws = await self._connect_with_headers(alternative_url, headers)
-                        self.logger.info("Connected to alternative WebSocket server")
-                        return True
-                    except Exception as e2:
-                        self.logger.error(f"Alternative WebSocket connection also failed: {e2}")
+                # Try fallback clusters if primary fails
+                if not is_token_price:
+                    fallback_urls = [
+                        "wss://cluster3.axiom.trade/",
+                        "wss://cluster5.axiom.trade/",
+                        "wss://cluster7.axiom.trade/",
+                    ]
+                    for alt_url in fallback_urls:
+                        if alt_url == current_url:
+                            continue
+                        try:
+                            self.logger.info(f"Trying fallback WebSocket URL: {alt_url}")
+                            self.ws = await self._connect_with_headers(alt_url, headers)
+                            self.logger.info(f"Connected to fallback WebSocket server: {alt_url}")
+                            return True
+                        except Exception as e2:
+                            self.logger.error(f"Fallback {alt_url} also failed: {e2}")
             return False
 
     async def subscribe_new_tokens(self, callback: Callable[[Dict[str, Any]], None]):
