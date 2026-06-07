@@ -31,32 +31,15 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-async def handle_new_pairs(data):
+async def handle_new_pairs(tokens):
     """
     Callback function to handle new token pair updates.
-    
+
     Args:
-        data: Dictionary containing information about the new token pair
-    
-    Expected data structure:
-    {
-        "room": "new_pairs",
-        "content": {
-            "tokenName": "Token Name",
-            "tokenTicker": "TICKER",
-            "tokenAddress": "base58_address",
-            "protocol": "raydium/orca/etc",
-            "marketCapSol": 123.45,
-            "volumeSol": 67.89,
-            "liquiditySol": 100.00,
-            "pairCreatedAt": "ISO_datetime",
-            ...
-        }
-    }
+        tokens: List of token dicts received from the new_pairs WebSocket room.
     """
-    try:
-        # Extract content from the message
-        content = data.get('content', {})
+    for content in tokens:
+     try:
         
         # Display new token information
         logger.info("=" * 60)
