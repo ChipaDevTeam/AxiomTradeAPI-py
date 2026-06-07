@@ -493,21 +493,20 @@ class AuthManager:
             self.logger.error("No refresh token available")
             return False
 
-        # Headers based on your curl command
         headers = {
             'accept': 'application/json, text/plain, */*',
-            'accept-language': 'en-US,en;q=0.9,es;q=0.8,fr;q=0.7,de;q=0.6',
+            'accept-language': 'en,es-CL;q=0.9,es-419;q=0.8,es;q=0.7,fr;q=0.6',
             'content-length': '0',
-            'origin': 'https://axiom.trade/',
+            'origin': 'https://axiom.trade',
             'priority': 'u=1, i',
             'referer': 'https://axiom.trade/',
-            'sec-ch-ua': '"Opera GX";v="120", "Not-A.Brand";v="8", "Chromium";v="135"',
+            'sec-ch-ua': '"Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"',
             'sec-ch-ua-mobile': '?0',
             'sec-ch-ua-platform': '"Windows"',
             'sec-fetch-dest': 'empty',
             'sec-fetch-mode': 'cors',
             'sec-fetch-site': 'same-site',
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36 OPR/120.0.0.0'
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
         }
         
         # Add cookies with both tokens (as shown in your curl)
