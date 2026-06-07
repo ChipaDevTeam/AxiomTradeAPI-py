@@ -6,12 +6,14 @@
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Documentation](https://img.shields.io/badge/docs-available-brightgreen.svg)](https://chipadevteam.github.io/AxiomTradeAPI-py)
+[![Trade on Axiom](https://img.shields.io/badge/Trade%20on-Axiom-blue)](https://axiom.trade/@chipadev)
+[![ChipaEditor](https://img.shields.io/badge/Built%20with-ChipaEditor-orange)](https://chipaeditor.com/?utm_source=github&utm_medium=readme&utm_campaign=axiomtradeapi&utm_term=badge&utm_content=shield)
 
 **The Professional Python SDK for Solana Trading on Axiom Trade**
 
 *Build advanced trading bots, monitor portfolios, and automate Solana DeFi strategies with enterprise-grade reliability*
 
-[📚 **Documentation**](https://chipadevteam.github.io/AxiomTradeAPI-py) • [🚀 **Quick Start**](#quick-start) • [💬 **Community**](https://chipatrade.com/community) • [🛒 **Bot Development Services**](https://chipatrade.com/services/bot-development)
+[📚 **Documentation**](https://chipadevteam.github.io/AxiomTradeAPI-py) • [🚀 **Quick Start**](#quick-start) • [💬 **Community**](https://chipatrade.com/community) • [🛒 **Bot Development Services**](https://chipatrade.com/services/bot-development) • [🔗 **Trade on Axiom**](https://axiom.trade/@chipadev)
 
 </div>
 
@@ -323,6 +325,23 @@ Special thanks to:
 - Our community of developers and traders for continuous feedback
 - All contributors who help improve this library
 
+## ✍️ Write Better Trading Bots with ChipaEditor
+
+> **[ChipaEditor](https://chipaeditor.com/?utm_source=github&utm_medium=readme&utm_campaign=axiomtradeapi&utm_term=cta&utm_content=section)** — The AI-powered code editor purpose-built for DeFi developers and Solana traders.
+
+ChipaEditor supercharges your AxiomTradeAPI-py workflow with:
+
+- 🤖 **AI-assisted bot generation** — describe your strategy, get working code
+- ⚡ **Real-time Solana code completions** — context-aware suggestions for trading patterns
+- 🔍 **Built-in DeFi debugging** — trace token flows, inspect transactions inline
+- 📦 **One-click deployment** — ship your trading bots faster than ever
+
+👉 **[Try ChipaEditor Free →](https://chipaeditor.com/?utm_source=github&utm_medium=readme&utm_campaign=axiomtradeapi&utm_term=cta&utm_content=try_free)**
+
+## 🔗 Trade on Axiom
+
+Ready to put your bots to work? **[Start trading on Axiom Trade →](https://axiom.trade/@chipadev)**
+
 ## 🌐 Community & Services
 
 Join our growing community of traders and developers!
@@ -343,7 +362,7 @@ Need a custom trading bot? Our expert team builds high-performance custom soluti
 
 **Built with ❤️ by the ChipaDevTeam**
 
-[Website](https://chipatrade.com) • [Documentation](https://chipadevteam.github.io/AxiomTradeAPI-py) • [Community](https://chipatrade.com/community) • [Services](https://chipatrade.com/services/bot-development)
+[Website](https://chipatrade.com) • [Documentation](https://chipadevteam.github.io/AxiomTradeAPI-py) • [Community](https://chipatrade.com/community) • [Services](https://chipatrade.com/services/bot-development) • [Trade on Axiom](https://axiom.trade/@chipadev) • [ChipaEditor](https://chipaeditor.com/?utm_source=github&utm_medium=readme&utm_campaign=axiomtradeapi&utm_term=footer&utm_content=link)
 
 *⭐ Star this repository if you find it useful!*
 
