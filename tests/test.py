@@ -11,11 +11,11 @@ async def handle_tokens(tokens):
 
 async def main():
     # Get tokens from .env file
-    access_token = os.getenv("auth-access-token")
-    refresh_token = os.getenv("auth-refresh-token")
+    access_token = os.getenv("AXIOM_ACCESS_TOKEN")
+    refresh_token = os.getenv("AXIOM_REFRESH_TOKEN")
     
     if not access_token or not refresh_token:
-        print("Error: Missing auth-access-token or auth-refresh-token in .env file")
+        print("Error: Missing AXIOM_ACCESS_TOKEN or AXIOM_REFRESH_TOKEN in .env file")
         return
     
     try:
