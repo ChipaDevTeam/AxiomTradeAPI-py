@@ -292,8 +292,11 @@ Our SDK is optimized for professional trading applications:
 ### Environment Variables
 ```bash
 # Authentication
-export AXIOM_AUTH_TOKEN="your-auth-token"
+export AXIOM_ACCESS_TOKEN="your-access-token"
 export AXIOM_REFRESH_TOKEN="your-refresh-token"
+
+# Cloudflare bypass (get from browser DevTools → Application → Cookies → axiom.trade)
+export CF_CLEARANCE="your-cf_clearance-cookie-value"
 
 # API Configuration
 export AXIOM_API_TIMEOUT=30
