@@ -28,7 +28,7 @@ async def main():
         
         if client.auth_manager.ensure_valid_authentication():
             print("✓ Client authenticated with tokens from .env")
-            balance = client.GetBalance("BJBgjyDZx5FSsyJf6bFKVXuJV7DZY9PCSMSi5d9tcEVh")
+            balance = client.GetBalance("FRbUNvGxYNC1eFngpn7AD3f14aKKTJVC6zSMtvj2dyCS")
             print(f"Balance: {balance}")
         else:
             print("✗ Authentication failed with provided tokens")
