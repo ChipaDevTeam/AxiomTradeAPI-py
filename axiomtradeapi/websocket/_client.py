@@ -33,7 +33,8 @@ class AxiomTradeWebSocketClient:
 
         # curl_cffi session + ws (primary path)
         self._curl_session: Optional[CurlAsyncSession] = None
-        self._curl_ws = None
+        self._curl_ws = None       # actual WebSocket object
+        self._curl_ws_ctx = None   # async context manager (must be kept alive)
 
         # websockets fallback
         self.ws = None
@@ -177,16 +178,16 @@ class AxiomTradeWebSocketClient:
         for url in urls_to_try:
             try:
                 self.logger.info(f"Attempting WebSocket: {url}")
-                self._curl_ws = self._curl_session.ws_connect(
-                    url,
-                    headers=ws_headers,
-                    cookies=cookies,
-                )
+                ctx = self._curl_session.ws_connect(url, headers=ws_headers, cookies=cookies)
+                ws = await ctx.__aenter__()
+                self._curl_ws_ctx = ctx
+                self._curl_ws = ws
                 self.logger.info(f"Connected: {url}")
                 return True
             except Exception as e:
                 self.logger.error(f"Failed {url}: {e}")
                 self._curl_ws = None
+                self._curl_ws_ctx = None
 
         return False
 
