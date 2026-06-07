@@ -381,6 +381,8 @@ class AxiomTradeWebSocketClient:
                 data, _ = await self._curl_ws.recv()
                 if data:
                     await self._dispatch(data.decode('utf-8', errors='replace'))
+            except asyncio.CancelledError:
+                break
             except Exception as e:
                 self.logger.warning(f"WebSocket connection closed: {e}")
                 break

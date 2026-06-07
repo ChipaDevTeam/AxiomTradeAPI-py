@@ -39,78 +39,70 @@ async def handle_new_pairs(tokens):
         tokens: List of token dicts received from the new_pairs WebSocket room.
     """
     for content in tokens:
-     try:
-        
-        # Display new token information
-        logger.info("=" * 60)
-        logger.info("🚨 NEW TOKEN PAIR DETECTED!")
-        logger.info("=" * 60)
-        
-        # Basic token information (using correct field names from API)
-        token_name = content.get('token_name', 'Unknown')
-        token_ticker = content.get('token_ticker', 'N/A')
-        token_address = content.get('token_address', 'N/A')
-        protocol = content.get('protocol', content.get('display_protocol', 'N/A'))
-        pair_address = content.get('pair_address', 'N/A')
-        
-        logger.info(f"Token: {token_name} ({token_ticker})")
-        logger.info(f"Token Address: {token_address}")
-        logger.info(f"Pair Address: {pair_address}")
-        logger.info(f"Protocol: {protocol}")
-        
-        # Supply and liquidity information
-        supply = content.get('supply', 0)
-        initial_liquidity_sol = content.get('initial_liquidity_sol', 0)
-        initial_liquidity_token = content.get('initial_liquidity_token', 0)
-        
-        logger.info(f"Supply: {supply:,.0f}")
-        logger.info(f"Initial Liquidity: {initial_liquidity_sol:.2f} SOL / {initial_liquidity_token:,.0f} tokens")
-        
-        # Holder information
-        dev_holds_percent = content.get('dev_holds_percent', 0)
-        top_10_holders = content.get('top_10_holders', 0)
-        snipers_hold_percent = content.get('snipers_hold_percent', 0)
-        lp_burned = content.get('lp_burned', 0)
-        
-        logger.info(f"Dev Holds: {dev_holds_percent:.2f}%")
-        logger.info(f"Top 10 Holders: {top_10_holders:.2f}%")
-        logger.info(f"Snipers Hold: {snipers_hold_percent:.2f}%")
-        logger.info(f"LP Burned: {lp_burned}%")
-        
-        # Social links (if available)
-        website = content.get('website')
-        twitter = content.get('twitter')
-        telegram = content.get('telegram')
-        discord = content.get('discord')
-        
-        if website:
-            logger.info(f"🌐 Website: {website}")
-        if twitter:
-            logger.info(f"🐦 Twitter: {twitter}")
-        if telegram:
-            logger.info(f"💬 Telegram: {telegram}")
-        if discord:
-            logger.info(f"🎮 Discord: {discord}")
-        
-        # Deployer and creation info
-        deployer_address = content.get('deployer_address', 'N/A')
-        created_at = content.get('created_at', 'N/A')
-        open_trading = content.get('open_trading', 'N/A')
-        
-        logger.info(f"Deployer: {deployer_address}")
-        logger.info(f"Created: {created_at}")
-        logger.info(f"Trading Opened: {open_trading}")
-        
-        # Security information
-        mint_authority = content.get('mint_authority')
-        freeze_authority = content.get('freeze_authority')
-        logger.info(f"Mint Authority: {'None (Safe)' if mint_authority is None else mint_authority}")
-        logger.info(f"Freeze Authority: {'None (Safe)' if freeze_authority is None else freeze_authority}")
-        
-        logger.info("=" * 60)
-        
-    except Exception as e:
-        logger.error(f"Error handling new pair data: {e}")
+        try:
+            logger.info("=" * 60)
+            logger.info("🚨 NEW TOKEN PAIR DETECTED!")
+            logger.info("=" * 60)
+
+            token_name = content.get('token_name', 'Unknown')
+            token_ticker = content.get('token_ticker', 'N/A')
+            token_address = content.get('token_address', 'N/A')
+            protocol = content.get('protocol', content.get('display_protocol', 'N/A'))
+            pair_address = content.get('pair_address', 'N/A')
+
+            logger.info(f"Token: {token_name} ({token_ticker})")
+            logger.info(f"Token Address: {token_address}")
+            logger.info(f"Pair Address: {pair_address}")
+            logger.info(f"Protocol: {protocol}")
+
+            supply = content.get('supply', 0)
+            initial_liquidity_sol = content.get('initial_liquidity_sol', 0)
+            initial_liquidity_token = content.get('initial_liquidity_token', 0)
+
+            logger.info(f"Supply: {supply:,.0f}")
+            logger.info(f"Initial Liquidity: {initial_liquidity_sol:.2f} SOL / {initial_liquidity_token:,.0f} tokens")
+
+            dev_holds_percent = content.get('dev_holds_percent', 0)
+            top_10_holders = content.get('top_10_holders', 0)
+            snipers_hold_percent = content.get('snipers_hold_percent', 0)
+            lp_burned = content.get('lp_burned', 0)
+
+            logger.info(f"Dev Holds: {dev_holds_percent:.2f}%")
+            logger.info(f"Top 10 Holders: {top_10_holders:.2f}%")
+            logger.info(f"Snipers Hold: {snipers_hold_percent:.2f}%")
+            logger.info(f"LP Burned: {lp_burned}%")
+
+            website = content.get('website')
+            twitter = content.get('twitter')
+            telegram = content.get('telegram')
+            discord = content.get('discord')
+
+            if website:
+                logger.info(f"🌐 Website: {website}")
+            if twitter:
+                logger.info(f"🐦 Twitter: {twitter}")
+            if telegram:
+                logger.info(f"💬 Telegram: {telegram}")
+            if discord:
+                logger.info(f"🎮 Discord: {discord}")
+
+            deployer_address = content.get('deployer_address', 'N/A')
+            created_at = content.get('created_at', 'N/A')
+            open_trading = content.get('open_trading', 'N/A')
+
+            logger.info(f"Deployer: {deployer_address}")
+            logger.info(f"Created: {created_at}")
+            logger.info(f"Trading Opened: {open_trading}")
+
+            mint_authority = content.get('mint_authority')
+            freeze_authority = content.get('freeze_authority')
+            logger.info(f"Mint Authority: {'None (Safe)' if mint_authority is None else mint_authority}")
+            logger.info(f"Freeze Authority: {'None (Safe)' if freeze_authority is None else freeze_authority}")
+
+            logger.info("=" * 60)
+
+        except Exception as e:
+            logger.error(f"Error handling new pair data: {e}")
 
 
 async def main():
