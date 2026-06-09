@@ -41,6 +41,7 @@ dependencies = [
 telegram = ["python-telegram-bot>=20.0"]
 dev = ["pytest", "black", "flake8"]
 all-proxies = ["beautifulsoup4", "websockets-proxy>=0.1.0", "requests[socks]"]
+browser = ["nodriver"]
 
 [project.urls]
 Homepage = "https://github.com/ChipaDevTeam/AxiomTradeAPI-py"
