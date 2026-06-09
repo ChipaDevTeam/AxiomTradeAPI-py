@@ -517,20 +517,31 @@ class AuthManager:
             tab = await browser.get("https://axiom.trade")
 
             # ── Minimize the browser window so the terminal stays in focus ───
+            await asyncio.sleep(1)  # give Chrome time to paint its window
             try:
-                from nodriver import cdp
-                result = await browser.connection.send(
-                    cdp.browser.get_window_for_target(target_id=tab.target_id)
+                import ctypes, ctypes.wintypes
+                SW_MINIMIZE = 6
+                user32 = ctypes.windll.user32
+                minimized = []
+
+                def _enum_cb(hwnd, _):
+                    if user32.IsWindowVisible(hwnd):
+                        buf = ctypes.create_unicode_buffer(512)
+                        user32.GetWindowTextW(hwnd, buf, 512)
+                        title = buf.value.lower()
+                        if 'chrome' in title or 'axiom' in title:
+                            user32.ShowWindow(hwnd, SW_MINIMIZE)
+                            minimized.append(buf.value)
+                    return True
+
+                WNDENUMPROC = ctypes.WINFUNCTYPE(
+                    ctypes.c_bool, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM
                 )
-                await browser.connection.send(
-                    cdp.browser.set_window_bounds(
-                        window_id=result.window_id,
-                        bounds=cdp.browser.Bounds(
-                            window_state=cdp.browser.WindowState.MINIMIZED
-                        )
-                    )
-                )
-                self.logger.debug("Browser window minimized")
+                user32.EnumWindows(WNDENUMPROC(_enum_cb), 0)
+                if minimized:
+                    self.logger.debug(f"Browser minimized: {minimized}")
+                else:
+                    self.logger.debug("No Chrome/Axiom window found to minimize")
             except Exception as _e:
                 self.logger.debug(f"Could not minimize browser: {_e}")
 
