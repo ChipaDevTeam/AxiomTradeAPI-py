@@ -125,47 +125,81 @@ class AxiomTradeClient:
         """Get current refresh token"""
         return self.auth_manager.tokens.refresh_token if self.auth_manager.tokens else None
     
-    def login(self, email: str = None, password: str = None, otp_callback=None) -> Dict:
+    def login(self, email: str = None, password: str = None,
+              imap_password: str = None, imap_user: str = None,
+              otp_callback=None) -> Dict:
         """
-        Login with username and password using the enhanced auth flow
-        
+        Log in with email and password.
+
+        Uses a real Chrome browser (via ``nodriver``) to handle Cloudflare
+        Turnstile automatically.  If ``imap_password`` is provided the OTP
+        sent to your inbox is read automatically; otherwise you are prompted
+        in the terminal.
+
+        Tokens are saved to encrypted local storage so subsequent runs skip
+        the login entirely — only a token refresh is needed.
+
         Args:
-            email: Email address (optional if provided in constructor)
-            password: Password (optional if provided in constructor)
-            otp_callback: Optional function to retrieve OTP (e.g. from email tool)
-            
+            email: Axiom account email. Falls back to the value passed to the
+                   constructor or the ``AXIOM_EMAIL`` env var.
+            password: Axiom account password. Falls back to constructor /
+                      ``AXIOM_PASSWORD`` env var.
+            imap_password: Password for the IMAP mailbox that receives the OTP
+                           email.  For Gmail with 2FA use an App Password.
+                           Also read from ``AXIOM_IMAP_PASSWORD`` env var.
+            imap_user: IMAP login username when it differs from *email* (e.g.
+                       when the Axiom address is an alias).  Also read from
+                       ``AXIOM_IMAP_USER`` env var.
+            otp_callback: Legacy callable that returns the OTP string. Ignored
+                          when ``nodriver`` is installed.
+
         Returns:
-            Dict: Login result with token information
+            Dict with keys ``success`` (bool), ``access_token``,
+            ``refresh_token``, ``expires_at``, and ``message``.
+
+        Example::
+
+            client = AxiomTradeClient(
+                username="you@example.com",
+                password="yourpassword",
+            )
+            result = client.login(imap_password="email_app_password")
+            if result["success"]:
+                print("Logged in!")
         """
-        # Use provided credentials or fall back to constructor values
+        import asyncio
+
         email = email or self.auth_manager.username
         password = password or self.auth_manager.password
-        
+
         if not email or not password:
             raise ValueError("Email and password are required for login")
-        
-        # Update auth manager credentials
+
         self.auth_manager.username = email
         self.auth_manager.password = password
-        
-        # Perform authentication
+        if imap_password:
+            self.auth_manager.imap_password = imap_password
+        if imap_user:
+            self.auth_manager.imap_user = imap_user
+
         success = self.auth_manager.authenticate(otp_callback=otp_callback)
-        
+
         if success and self.auth_manager.tokens:
+            # Sync new tokens into the HTTP session
+            self.session.cookies.set(
+                'auth-access-token', self.auth_manager.tokens.access_token
+            )
+            self.session.cookies.set(
+                'auth-refresh-token', self.auth_manager.tokens.refresh_token
+            )
             return {
                 'success': True,
                 'access_token': self.auth_manager.tokens.access_token,
                 'refresh_token': self.auth_manager.tokens.refresh_token,
                 'expires_at': self.auth_manager.tokens.expires_at,
-                'message': 'Login successful'
+                'message': 'Login successful',
             }
-        else:
-            return {
-                'success': False,
-                'message': 'Login failed'
-            }
-        
-        return login_result
+        return {'success': False, 'message': 'Login failed'}
     
     def get_websocket_client(self, log_level=logging.INFO) -> AxiomTradeWebSocketClient:
         """
