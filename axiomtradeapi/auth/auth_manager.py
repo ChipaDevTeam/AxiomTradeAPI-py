@@ -308,44 +308,173 @@ class AuthManager:
     
     def authenticate(self, otp_callback=None) -> bool:
         """
-        Authenticate with username/password using Axiom's OTP login flow
-        
+        Authenticate with username/password.
+
+        Tries nodriver (headless Chrome) first so Cloudflare Turnstile is
+        solved automatically inside a real browser. Falls back to the direct
+        API flow (which requires a Turnstile token that is no longer obtainable
+        without a browser, so it will fail on axiom.trade as of v1.1.5+).
+
         Args:
-            otp_callback: Optional function that returns the OTP code string. 
-                         If not provided, uses input() to ask user.
-        
+            otp_callback: Optional callable that returns the OTP string.
+                          Used only in the fallback API path.
+
         Returns:
             bool: True if authentication successful, False otherwise
         """
         if not self.username or not self.password:
             self.logger.error("Username and password required for authentication")
             return False
-        
+
         try:
-            self.logger.info("Starting Axiom Trade authentication...")
-            
-            # Step 1: Get OTP JWT token
+            import nodriver  # noqa: F401
+            self.logger.info("nodriver available — using browser-based login")
+            import asyncio
+            return asyncio.run(self._login_with_browser())
+        except ImportError:
+            self.logger.warning(
+                "nodriver not installed — falling back to direct API login "
+                "(will fail if Turnstile is required). "
+                "Install with: pip install nodriver"
+            )
+
+        # --- direct API fallback (Turnstile-blocked on current axiom.trade) ---
+        try:
+            self.logger.info("Starting Axiom Trade authentication (direct API)...")
             otp_jwt_token = self._login_step1()
             if not otp_jwt_token:
                 return False
-            
-            # Step 2: Get OTP code
-            if otp_callback:
-                self.logger.info("Waiting for OTP from callback...")
-                otp_code = otp_callback()
-            else:
-                otp_code = input("Enter the OTP code sent to your email: ")
-                
+            otp_code = otp_callback() if otp_callback else input("Enter the OTP code sent to your email: ")
             if not otp_code:
                 self.logger.error("OTP code is required")
                 return False
-            
-            # Step 3: Complete login with OTP
             return self._login_step2(otp_jwt_token, otp_code)
-            
         except Exception as e:
             self.logger.error(f"❌ Authentication error: {e}")
             return False
+
+    async def _login_with_browser(self) -> bool:
+        """
+        Full login flow driven by a real Chrome instance via nodriver.
+
+        nodriver controls an undetected Chrome so Cloudflare Turnstile and
+        any other JS challenges are solved automatically inside the browser.
+        After login the auth cookies are extracted and stored.
+
+        Returns:
+            bool: True if tokens were extracted successfully.
+        """
+        import nodriver as uc
+
+        self.logger.info("🌐 Launching browser for Axiom Trade login...")
+        browser = None
+        try:
+            browser = await uc.start(headless=False)
+            tab = await browser.get("https://axiom.trade")
+
+            # ── Wait for the login form ──────────────────────────────────────
+            self.logger.debug("Waiting for email field...")
+            email_field = await tab.select("input[type='email'], input[name='email'], input[placeholder*='mail' i]", timeout=20)
+            if not email_field:
+                self.logger.error("Could not find email input on axiom.trade")
+                return False
+
+            await email_field.send_keys(self.username)
+            self.logger.debug("Email entered")
+
+            # Password field
+            password_field = await tab.select("input[type='password']", timeout=10)
+            if not password_field:
+                self.logger.error("Could not find password input on axiom.trade")
+                return False
+
+            await password_field.send_keys(self.password)
+            self.logger.debug("Password entered")
+
+            # Submit button — look for common patterns
+            submit_btn = await tab.select(
+                "button[type='submit'], button:contains('Login'), button:contains('Sign in'), button:contains('Log in')",
+                timeout=10
+            )
+            if not submit_btn:
+                self.logger.error("Could not find submit button on axiom.trade")
+                return False
+
+            await submit_btn.click()
+            self.logger.info("Login form submitted — waiting for OTP screen or redirect...")
+
+            # ── OTP step ────────────────────────────────────────────────────
+            # Give Turnstile time to complete, then look for OTP input
+            await tab.sleep(3)
+
+            otp_input = await tab.select(
+                "input[name='otp'], input[name='code'], input[placeholder*='code' i], input[placeholder*='OTP' i], input[maxlength='6']",
+                timeout=15
+            )
+
+            if otp_input:
+                self.logger.info("OTP screen detected — check your email")
+                otp_code = input("Enter the OTP code sent to your email: ")
+                if not otp_code:
+                    self.logger.error("OTP code is required")
+                    return False
+
+                await otp_input.send_keys(otp_code)
+
+                otp_submit = await tab.select("button[type='submit']", timeout=5)
+                if otp_submit:
+                    await otp_submit.click()
+
+                await tab.sleep(3)
+            else:
+                # No OTP screen — may have logged in directly or failed
+                self.logger.debug("No OTP input found; assuming direct login or error")
+
+            # ── Extract cookies ──────────────────────────────────────────────
+            self.logger.debug("Extracting auth cookies from browser...")
+            cookies = await browser.cookies.get_all()
+
+            access_token = None
+            refresh_token = None
+            cf_clearance = None
+
+            for cookie in cookies:
+                name = getattr(cookie, 'name', None) or cookie.get('name', '')
+                value = getattr(cookie, 'value', None) or cookie.get('value', '')
+                if name == 'auth-access-token':
+                    access_token = value
+                elif name == 'auth-refresh-token':
+                    refresh_token = value
+                elif name == 'cf_clearance':
+                    cf_clearance = value
+
+            if access_token and refresh_token:
+                self._set_tokens(access_token, refresh_token)
+                if cf_clearance:
+                    self.cf_clearance = cf_clearance
+                    self.logger.info("✅ cf_clearance cookie also captured")
+                self.logger.info("✅ Browser login successful — tokens extracted")
+                return True
+            else:
+                # Dump cookie names to help debug
+                cookie_names = [
+                    getattr(c, 'name', None) or c.get('name', '') for c in cookies
+                ]
+                self.logger.error(
+                    f"❌ Auth cookies not found after login. "
+                    f"Cookies present: {cookie_names}"
+                )
+                return False
+
+        except Exception as e:
+            self.logger.error(f"❌ Browser login error: {e}", exc_info=True)
+            return False
+        finally:
+            if browser:
+                try:
+                    browser.stop()
+                except Exception:
+                    pass
     
     def _get_b64_password(self, password: str) -> str:
         """Hashes a password using PBKDF2-HMAC-SHA256 and returns a Base64 string."""
@@ -366,50 +495,55 @@ class AuthManager:
     def _login_step1(self) -> Optional[str]:
         """First step of login - send email and password to get OTP JWT token"""
         from axiomtradeapi.urls import AAllBaseUrls, AxiomTradeApiUrls
-        
-        # Hash password
+        from curl_cffi import requests as cffi_requests
+
         b64_password = self._get_b64_password(self.password)
-        
+
         url = f'{AAllBaseUrls.BASE_URL_v6}{AxiomTradeApiUrls.LOGIN_STEP1}'
-        
+
         headers = {
             'accept': 'application/json, text/plain, */*',
-            'accept-language': 'en-US,en;q=0.9,es;q=0.8',
+            'accept-language': 'en-US,en;q=0.9',
             'content-type': 'application/json',
             'origin': 'https://axiom.trade',
-            'priority': 'u=1, i',
             'referer': 'https://axiom.trade/',
-            'sec-ch-ua': '"Chromium";v="134", "Not:A-Brand";v="24", "Opera GX";v="119"',
+            'sec-ch-ua': '"Google Chrome";v="136", "Chromium";v="136", "Not.A/Brand";v="99"',
             'sec-ch-ua-mobile': '?0',
             'sec-ch-ua-platform': '"Windows"',
             'sec-fetch-dest': 'empty',
             'sec-fetch-mode': 'cors',
             'sec-fetch-site': 'same-site',
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 OPR/119.0.0.0',
-            'Cookie': 'auth-otp-login-token='
         }
-        
+
+        cookies = {}
+        if self.cf_clearance:
+            cookies['cf_clearance'] = self.cf_clearance
+
         data = {
             "email": self.username,
             "b64Password": b64_password
         }
-        
+
         try:
             self.logger.debug(f"Sending login step 1 request for email: {self.username}")
-            response = requests.post(url, headers=headers, json=data, timeout=30, proxies=self.proxies)
-            
+            response = cffi_requests.post(
+                url, headers=headers, json=data, cookies=cookies,
+                timeout=30, impersonate="chrome136"
+            )
+
+            self.logger.debug(f"Login step 1 status: {response.status_code}")
             if response.status_code == 200:
                 otp_token = response.cookies.get('auth-otp-login-token')
                 if otp_token:
                     self.logger.debug("OTP JWT token received successfully")
                     return otp_token
                 else:
-                    self.logger.error("auth-otp-login-token not found in cookies!")
+                    self.logger.error(f"auth-otp-login-token not found in cookies! Response: {response.text[:300]}")
                     return None
             else:
-                self.logger.error(f"Login step 1 failed: {response.status_code} - {response.text}")
+                self.logger.error(f"Login step 1 failed: {response.status_code} - {response.text[:300]}")
                 return None
-                
+
         except Exception as e:
             self.logger.error(f"Login step 1 error: {e}")
             return None
@@ -417,67 +551,71 @@ class AuthManager:
     def _login_step2(self, otp_jwt_token: str, otp_code: str) -> bool:
         """Second step of login - send OTP code to complete authentication"""
         from axiomtradeapi.urls import AAllBaseUrls, AxiomTradeApiUrls
-        
-        # Hash password
+        from curl_cffi import requests as cffi_requests
+
         b64_password = self._get_b64_password(self.password)
-        
+
         url = f'{AAllBaseUrls.BASE_URL_v3}{AxiomTradeApiUrls.LOGIN_STEP2}'
-        
+
         headers = {
-            'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0',
-            'Accept': 'application/json, text/plain, */*',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate, br, zstd',
-            'Content-Type': 'application/json',
-            'Origin': 'https://axiom.trade',
-            'Connection': 'keep-alive',
-            'Referer': 'https://axiom.trade/',
-            'Cookie': f'auth-otp-login-token={otp_jwt_token}',
-            'Sec-Fetch-Dest': 'empty',
-            'Sec-Fetch-Mode': 'cors',
-            'Sec-Fetch-Site': 'same-site',
-            'TE': 'trailers'
+            'accept': 'application/json, text/plain, */*',
+            'accept-language': 'en-US,en;q=0.9',
+            'content-type': 'application/json',
+            'origin': 'https://axiom.trade',
+            'referer': 'https://axiom.trade/',
+            'sec-ch-ua': '"Google Chrome";v="136", "Chromium";v="136", "Not.A/Brand";v="99"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-site',
         }
-        
+
+        cookies = {'auth-otp-login-token': otp_jwt_token}
+        if self.cf_clearance:
+            cookies['cf_clearance'] = self.cf_clearance
+
         data = {
             "code": otp_code,
             "email": self.username,
             "b64Password": b64_password
         }
-        
+
         try:
             self.logger.debug("Sending login step 2 request with OTP code")
-            response = requests.post(url, headers=headers, json=data, timeout=30, proxies=self.proxies)
-            
+            response = cffi_requests.post(
+                url, headers=headers, json=data, cookies=cookies,
+                timeout=30, impersonate="chrome136"
+            )
+
+            self.logger.debug(f"Login step 2 status: {response.status_code}")
             if response.status_code == 200:
-                # Extract tokens from response cookies
                 auth_token = response.cookies.get('auth-access-token')
                 refresh_token = response.cookies.get('auth-refresh-token')
-                
+
                 if auth_token and refresh_token:
                     self._set_tokens(auth_token, refresh_token)
                     self.logger.info("✅ Authentication successful!")
                     return True
-                else:
-                    # Sometimes tokens are in response body
-                    try:
-                        response_data = response.json()
-                        auth_token = response_data.get('accessToken') or response_data.get('auth-access-token')
-                        refresh_token = response_data.get('refreshToken') or response_data.get('auth-refresh-token')
-                        
-                        if auth_token and refresh_token:
-                            self._set_tokens(auth_token, refresh_token)
-                            self.logger.info("✅ Authentication successful!")
-                            return True
-                    except:
-                        pass
-                    
-                    self.logger.error("❌ No authentication tokens found in response")
-                    return False
-            else:
-                self.logger.error(f"❌ Login step 2 failed: {response.status_code} - {response.text}")
+
+                # Fallback: check response body
+                try:
+                    response_data = response.json()
+                    auth_token = response_data.get('accessToken') or response_data.get('auth-access-token')
+                    refresh_token = response_data.get('refreshToken') or response_data.get('auth-refresh-token')
+                    if auth_token and refresh_token:
+                        self._set_tokens(auth_token, refresh_token)
+                        self.logger.info("✅ Authentication successful!")
+                        return True
+                except Exception:
+                    pass
+
+                self.logger.error(f"❌ No authentication tokens found in response: {response.text[:300]}")
                 return False
-                
+            else:
+                self.logger.error(f"❌ Login step 2 failed: {response.status_code} - {response.text[:300]}")
+                return False
+
         except Exception as e:
             self.logger.error(f"❌ Login step 2 error: {e}")
             return False

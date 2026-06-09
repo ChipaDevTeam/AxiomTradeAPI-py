@@ -44,21 +44,22 @@ class AxiomTradeClient:
       https://chipaeditor.com/?utm_source=code&utm_medium=example&utm_campaign=axiomtradeapi&utm_term=advanced&utm_content=docstring
     """
     
-    def __init__(self, username: str = None, password: str = None, 
+    def __init__(self, username: str = None, password: str = None,
                  auth_token: str = None, refresh_token: str = None,
                  storage_dir: str = None, use_saved_tokens: bool = True,
-                 proxies: Dict[str, str] = None):
+                 proxies: Dict[str, str] = None, cf_clearance: str = None):
         """
         Initialize AxiomTradeClient with enhanced authentication
-        
+
         Args:
             username: Email for automatic login
-            password: Password for automatic login  
+            password: Password for automatic login
             auth_token: Existing auth token (optional)
             refresh_token: Existing refresh token (optional)
             storage_dir: Directory for secure token storage
             use_saved_tokens: Whether to load/save tokens automatically (default: True)
             proxies: Dictionary mapping protocol to proxy URL (optional)
+            cf_clearance: Cloudflare clearance cookie value (optional, also read from CF_CLEARANCE env var)
         """
         # Initialize the enhanced auth manager
         self.auth_manager = AuthManager(
@@ -68,7 +69,8 @@ class AxiomTradeClient:
             refresh_token=refresh_token,
             storage_dir=storage_dir,
             use_saved_tokens=use_saved_tokens,
-            proxies=proxies
+            proxies=proxies,
+            cf_clearance=cf_clearance,
         )
         
         # Initialize endpoints for trading functionality
