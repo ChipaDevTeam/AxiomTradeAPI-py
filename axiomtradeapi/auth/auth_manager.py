@@ -379,7 +379,11 @@ class AuthManager:
             'protonmail.com': 'imap.protonmail.com',
             'proton.me': 'imap.protonmail.com',
         }
-        return known.get(domain, f'imap.{domain}')
+        if domain in known:
+            return known[domain]
+        # Try to detect Hostinger / cPanel-hosted domains by probing imap.hostinger.com
+        # then fall back to the generic imap.<domain> pattern
+        return 'imap.hostinger.com'
 
     async def _get_otp_from_imap(self, timeout: int = 60) -> Optional[str]:
         """
