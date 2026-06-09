@@ -353,7 +353,7 @@ if __name__ == '__main__':
             credentials = login_step2(otp_jwt_token, otp_code, email, b64_password)
             
             print('Login successful!')
-            print(f"Client Secret: {credentials.get('clientSecret')}")
+            print("Client Secret: [REDACTED]")
             print(f"Org ID: {credentials.get('orgId')}")
             print(f"User ID: {credentials.get('userId')}")
             
