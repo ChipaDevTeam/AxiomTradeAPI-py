@@ -78,6 +78,7 @@ class AxiomTradeClient:
             cf_clearance=cf_clearance,
             imap_password=imap_password,
             imap_host=imap_host,
+            imap_user=imap_user,
         )
         
         # Initialize endpoints for trading functionality
