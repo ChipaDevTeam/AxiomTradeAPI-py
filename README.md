@@ -82,8 +82,9 @@ python -c "from axiomtradeapi import AxiomTradeClient; print('✅ Installation s
 
 ### Basic Usage
 
-#### 1. Automatic Authentication (Recommended)
-This method automatically handles login, saves your session securely, and resumes it on future runs.
+#### 1. Browser Login — Fully Automatic (Recommended)
+
+The SDK uses a real Chrome window to bypass Cloudflare Turnstile. Provide your IMAP credentials and the entire flow — including the OTP — is zero-touch. Tokens are saved locally and auto-refreshed, so the browser only opens **once**.
 
 ```python
 import os
@@ -92,31 +93,56 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Initialize client with credentials
 client = AxiomTradeClient(
-    username=os.getenv("EMAIL_ADDRESS"),
-    password=os.getenv("AXIOM_PASSWORD")
+    username=os.getenv("AXIOM_EMAIL"),
+    password=os.getenv("AXIOM_PASSWORD"),
 )
 
-# Automatically logs in if no saved session exists
-# Will trigger an OTP flow if 2FA is required
-if not client.is_authenticated():
-    print("Please follow the login prompt...")
-    client.login() # Takes optional otp_callback
+# First run: Chrome opens, fills credentials, reads OTP from inbox automatically
+# Subsequent runs: tokens loaded from disk — login() not needed
+if not client.auth_manager.is_authenticated():
+    result = client.login(
+        imap_password=os.getenv("AXIOM_IMAP_PASSWORD"),
+        # imap_user="real@yourdomain.com"  # only if AXIOM_EMAIL is an alias
+    )
+    if not result["success"]:
+        raise RuntimeError("Login failed")
 
-# Simulate browser connection to initialize tracking sessions
-# This is required for some endpoints to register you as an "active user"
-# and to pass detailed bot or scraper protection checks.
-client.connect(
-    token_address="8P5kBTzvG7xyjTZRzi4ftzpy6mnL74AHLtHDqyDq44ST", # Optional: Simulate landing on a token page
-    sol_public_keys=["Address1...", "Address2..."], # Optional: Check balances during connect
-    evm_public_keys=["0xAddress1..."] 
-)
-
-print(f"Logged in as: {client.auth_manager.username}")
+balance = client.GetBalance("YOUR_WALLET_ADDRESS")
+print(f"Balance: {balance}")
 ```
 
-#### 2. Manual Token Authentication
+**.env setup:**
+```env
+AXIOM_EMAIL=you@example.com
+AXIOM_PASSWORD=yourpassword
+AXIOM_IMAP_PASSWORD=your_email_password   # enables auto-OTP
+AXIOM_IMAP_USER=real@yourdomain.com       # only needed if AXIOM_EMAIL is an alias
+```
+
+> **Gmail with 2FA?** Use an [App Password](https://myaccount.google.com/apppasswords) for `AXIOM_IMAP_PASSWORD`.
+
+#### 2. Token Authentication (Serverless / CI)
+Use pre-obtained tokens directly — no browser required. The SDK auto-refreshes them.
+
+```python
+import os
+from axiomtradeapi import AxiomTradeClient
+from dotenv import load_dotenv
+
+load_dotenv()
+
+client = AxiomTradeClient(
+    auth_token=os.getenv("AXIOM_ACCESS_TOKEN"),
+    refresh_token=os.getenv("AXIOM_REFRESH_TOKEN"),
+)
+
+if client.auth_manager.ensure_valid_authentication():
+    balance = client.GetBalance("YOUR_WALLET_ADDRESS")
+    print(f"Balance: {balance}")
+```
+
+#### 3. Manual Token Authentication
 Use this for serverless environments or when you manage tokens externally.
 
 ```python
