@@ -585,42 +585,43 @@ class AuthManager:
                 self.logger.info("📬 IMAP configured — will auto-read OTP from your inbox")
                 otp_task = asyncio.create_task(self._get_otp_from_imap(timeout=90))
 
-            # Wait for OTP screen to appear
-            otp_input = await tab.select(
-                'input[placeholder*="code" i], input[placeholder*="OTP" i], '
-                'input[placeholder*="verification" i], input[maxlength="6"]',
-                timeout=20
-            )
+            # Wait for OTP screen to appear — Axiom uses 6 individual maxlength=1 boxes
+            otp_input = await tab.select('input[maxlength="1"]', timeout=20)
 
-            if not otp_input:
+            # Axiom uses 6 individual single-character inputs for OTP
+            otp_boxes = await tab.select_all('input[maxlength="1"]')
+            # Filter to only the visible ones (the modal is an overlay on the homepage)
+            if not otp_boxes:
                 self.logger.warning("OTP screen not detected — may have logged in directly or an error occurred")
                 if otp_task:
                     otp_task.cancel()
             else:
-                self.logger.info("📧 OTP screen detected")
+                self.logger.info(f"📧 OTP screen detected ({len(otp_boxes)} digit boxes)")
 
                 if otp_task:
-                    # Wait for IMAP to return the code
                     self.logger.info("⏳ Waiting for OTP email (up to 90s)...")
                     otp_code = await otp_task
                 else:
                     otp_code = None
 
                 if not otp_code:
-                    # Manual fallback
                     self.logger.info("Manual OTP entry required")
                     otp_code = input("Enter the OTP code sent to your email: ").strip()
 
-                if not otp_code:
-                    self.logger.error("No OTP code provided")
+                if not otp_code or len(otp_code) != 6:
+                    self.logger.error(f"Invalid OTP code: '{otp_code}' (expected 6 digits)")
                     return False
 
                 self.logger.info(f"Entering OTP: {otp_code}")
-                await otp_input.clear_input()
-                await otp_input.send_keys(otp_code)
-                await asyncio.sleep(1)
+                # Type one digit into each input box
+                for i, box in enumerate(otp_boxes[:6]):
+                    await box.send_keys(otp_code[i])
+                    await asyncio.sleep(0.1)
 
-                # Submit OTP — click the first visible button in the modal area
+                self.logger.info("OTP digits entered — waiting for auto-submit or submitting...")
+                await asyncio.sleep(2)
+
+                # Some OTP UIs auto-submit when all boxes are filled; if not, click submit
                 await tab.evaluate("""
                     (function() {
                         var btns = document.querySelectorAll('button');
