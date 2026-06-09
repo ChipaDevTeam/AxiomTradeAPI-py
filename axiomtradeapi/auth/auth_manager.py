@@ -216,7 +216,8 @@ class AuthManager:
                  auth_token: str = None, refresh_token: str = None,
                  storage_dir: str = None, use_saved_tokens: bool = True,
                  proxies: Dict[str, str] = None, cf_clearance: str = None,
-                 imap_password: str = None, imap_host: str = None):
+                 imap_password: str = None, imap_host: str = None,
+                 imap_user: str = None):
         """
         Initialize AuthManager
 
@@ -243,6 +244,8 @@ class AuthManager:
         self.cf_clearance = cf_clearance or os.environ.get("CF_CLEARANCE")
         self.imap_password = imap_password or os.environ.get("AXIOM_IMAP_PASSWORD") or password
         self.imap_host = imap_host or os.environ.get("AXIOM_IMAP_HOST")
+        # imap_user can differ from username when the Axiom login is an alias
+        self.imap_user = imap_user or os.environ.get("AXIOM_IMAP_USER") or username
         
         # Setup logging
         self.logger = logging.getLogger(__name__)
@@ -405,16 +408,17 @@ class AuthManager:
 
         host = self.imap_host or self._detect_imap_host()
         imap_pwd = self.imap_password or self.password
+        imap_user = self.imap_user or self.username
 
         if not imap_pwd:
             self.logger.warning("No IMAP password — cannot auto-read OTP")
             return None
 
-        self.logger.info(f"📬 Connecting to IMAP ({host}) to auto-read OTP...")
+        self.logger.info(f"📬 Connecting to IMAP ({host}) as {imap_user}...")
 
         try:
             mail = imaplib.IMAP4_SSL(host)
-            mail.login(self.username, imap_pwd)
+            mail.login(imap_user, imap_pwd)
             mail.select("INBOX")
         except Exception as e:
             self.logger.warning(f"IMAP connection failed: {e}")

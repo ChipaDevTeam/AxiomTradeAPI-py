@@ -48,7 +48,8 @@ class AxiomTradeClient:
                  auth_token: str = None, refresh_token: str = None,
                  storage_dir: str = None, use_saved_tokens: bool = True,
                  proxies: Dict[str, str] = None, cf_clearance: str = None,
-                 imap_password: str = None, imap_host: str = None):
+                 imap_password: str = None, imap_host: str = None,
+                 imap_user: str = None):
         """
         Initialize AxiomTradeClient with enhanced authentication
 
