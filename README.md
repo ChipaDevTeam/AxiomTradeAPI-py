@@ -206,6 +206,7 @@ Our documentation covers everything from basic setup to advanced trading strateg
 | [🤖 **Trading Bots**](https://chipadevteam.github.io/AxiomTradeAPI-py/trading-bots/) | Automated strategies, bot frameworks | Advanced |
 | [⚡ **Performance**](https://chipadevteam.github.io/AxiomTradeAPI-py/performance/) | Optimization, scaling, monitoring | Advanced |
 | [🛡️ **Security**](https://chipadevteam.github.io/AxiomTradeAPI-py/security/) | Best practices, secure deployment | All Levels |
+| [📝 **Release Notes 1.1.6**](https://chipadevteam.github.io/AxiomTradeAPI-py/release-1-1-6/) | Browser login, IMAP auto-OTP | All Levels |
 | [📝 **Release Notes 1.1.5**](https://chipadevteam.github.io/AxiomTradeAPI-py/release-1-1-5/) | Cloudflare bypass, auto token refresh | All Levels |
 
 ## 🏆 Professional Use Cases
@@ -332,11 +333,20 @@ Our SDK is optimized for professional trading applications:
 
 ### Environment Variables
 ```bash
-# Authentication
+# ── Credentials (for browser login) ──────────────────────────────────────────
+export AXIOM_EMAIL="you@example.com"
+export AXIOM_PASSWORD="yourpassword"
+
+# ── IMAP auto-OTP (optional — enables fully zero-touch login) ─────────────────
+export AXIOM_IMAP_PASSWORD="your_email_password"   # Gmail: use an App Password
+export AXIOM_IMAP_USER="real@yourdomain.com"       # only if AXIOM_EMAIL is an alias
+export AXIOM_IMAP_HOST="imap.hostinger.com"        # only if auto-detection is wrong
+
+# ── Token authentication (for serverless / CI) ────────────────────────────────
 export AXIOM_ACCESS_TOKEN="your-access-token"
 export AXIOM_REFRESH_TOKEN="your-refresh-token"
 
-# Cloudflare bypass (get from browser DevTools → Application → Cookies → axiom.trade)
+# ── Cloudflare (captured automatically by browser login) ──────────────────────
 export CF_CLEARANCE="your-cf_clearance-cookie-value"
 
 # API Configuration
