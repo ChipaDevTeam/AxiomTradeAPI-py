@@ -3,7 +3,7 @@
 <div align="center">
 
 [![PyPI version](https://badge.fury.io/py/axiomtradeapi.svg)](https://badge.fury.io/py/axiomtradeapi)
-[![Version](https://img.shields.io/badge/version-1.1.5-blue)](https://chipadevteam.github.io/AxiomTradeAPI-py/release-1-1-5/)
+[![Version](https://img.shields.io/badge/version-1.1.6-blue)](https://chipadevteam.github.io/AxiomTradeAPI-py/release-1-1-6/)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Documentation](https://img.shields.io/badge/docs-available-brightgreen.svg)](https://chipadevteam.github.io/AxiomTradeAPI-py)
@@ -35,18 +35,30 @@ AxiomTradeAPI-py is the **most comprehensive Python library** for Solana trading
 | 📈 **Market Data** | Comprehensive Solana market info | Price feeds, volume analysis |
 | 🛡️ **Risk Management** | Built-in trading safeguards | Position sizing, loss limits |
 
-## 🆕 What's New in v1.1.5
+## 🆕 What's New in v1.1.6
 
-- **Chrome TLS impersonation** via `curl_cffi` — WebSocket connections now bypass Cloudflare's bot detection by impersonating Chrome 136's exact TLS fingerprint. No more HTTP 502 errors.
-- **JWT-aware token refresh** — the SDK now reads the real `exp` claim from your access token and auto-refreshes before it expires (previously always assumed 1-hour lifetime, causing silent failures).
-- **Pre-flight HTTP warm-up** — mirrors browser behaviour before opening the WebSocket to establish the Cloudflare session correctly.
-- **Cluster fallback fixed** — automatically tries cluster3/5/7 if the primary cluster is unavailable.
+- **Browser-based login** via `nodriver` — drives real Chrome to bypass Cloudflare Turnstile automatically. No manual steps required.
+- **IMAP OTP auto-reading** — provide your email password and the SDK reads the 6-digit OTP from your inbox and enters it automatically. Full zero-touch login.
+- **Login-once, run-forever** — tokens saved to encrypted local storage and auto-refreshed. The browser only opens on first login or when the refresh token expires.
+- **Alias email support** — set `AXIOM_IMAP_USER` separately when your Axiom login email is an alias pointing to a different mailbox.
 
 ```bash
 pip install --upgrade axiomtradeapi
+pip install "axiomtradeapi[browser]"   # adds nodriver
 ```
 
-[📋 Full release notes →](https://chipadevteam.github.io/AxiomTradeAPI-py/release-1-1-5/)
+[📋 Full release notes →](https://chipadevteam.github.io/AxiomTradeAPI-py/release-1-1-6/)
+
+<details>
+<summary>v1.1.5 notes</summary>
+
+- **Chrome TLS impersonation** via `curl_cffi` — WebSocket connections bypass Cloudflare's bot detection.
+- **JWT-aware token refresh** — reads the real `exp` claim; no more silent expiry failures.
+- **Pre-flight HTTP warm-up** — mirrors browser behaviour before WebSocket connect.
+- **Cluster fallback fixed** — automatically tries cluster3/5/7 on primary failure.
+
+[📋 Release notes →](https://chipadevteam.github.io/AxiomTradeAPI-py/release-1-1-5/)
+</details>
 
 ---
 
@@ -55,8 +67,11 @@ pip install --upgrade axiomtradeapi
 ### Installation
 
 ```bash
-# Install from PyPI
+# Core SDK
 pip install axiomtradeapi
+
+# + browser login support (recommended)
+pip install "axiomtradeapi[browser]"
 
 # Or install with development dependencies
 pip install axiomtradeapi[dev]
