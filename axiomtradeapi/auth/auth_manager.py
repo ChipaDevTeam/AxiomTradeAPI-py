@@ -215,18 +215,25 @@ class AuthManager:
     def __init__(self, username: str = None, password: str = None,
                  auth_token: str = None, refresh_token: str = None,
                  storage_dir: str = None, use_saved_tokens: bool = True,
-                 proxies: Dict[str, str] = None, cf_clearance: str = None):
+                 proxies: Dict[str, str] = None, cf_clearance: str = None,
+                 imap_password: str = None, imap_host: str = None):
         """
         Initialize AuthManager
-        
+
         Args:
             username: Email for automatic login
-            password: Password for automatic login  
+            password: Password for automatic login
             auth_token: Existing auth token (optional)
             refresh_token: Existing refresh token (optional)
             storage_dir: Directory for secure token storage
             use_saved_tokens: Whether to load saved tokens (default: True)
-            proxies: Dictionary mapping protocol to proxy URL (e.g. {'https': 'http://10.10.1.10:3128'})
+            proxies: Dictionary mapping protocol to proxy URL
+            cf_clearance: Cloudflare clearance cookie (also read from CF_CLEARANCE env var)
+            imap_password: Password for IMAP OTP reading. For Gmail with 2FA use an
+                           App Password (myaccount.google.com/apppasswords). If omitted,
+                           the login password is tried. Also read from AXIOM_IMAP_PASSWORD env var.
+            imap_host: IMAP server hostname. Auto-detected from email domain when not set.
+                       Also read from AXIOM_IMAP_HOST env var.
         """
         self.username = username
         self.password = password
@@ -234,6 +241,8 @@ class AuthManager:
         self.use_saved_tokens = use_saved_tokens
         self.proxies = proxies
         self.cf_clearance = cf_clearance or os.environ.get("CF_CLEARANCE")
+        self.imap_password = imap_password or os.environ.get("AXIOM_IMAP_PASSWORD") or password
+        self.imap_host = imap_host or os.environ.get("AXIOM_IMAP_HOST")
         
         # Setup logging
         self.logger = logging.getLogger(__name__)
@@ -353,16 +362,142 @@ class AuthManager:
             self.logger.error(f"❌ Authentication error: {e}")
             return False
 
-    async def _login_with_browser(self) -> bool:
-        """
-        Full login flow driven by a real Chrome instance via nodriver.
+    def _detect_imap_host(self) -> str:
+        """Guess the IMAP host from the email domain."""
+        if not self.username or '@' not in self.username:
+            return 'imap.gmail.com'
+        domain = self.username.split('@')[1].lower()
+        known = {
+            'gmail.com': 'imap.gmail.com',
+            'googlemail.com': 'imap.gmail.com',
+            'outlook.com': 'outlook.office365.com',
+            'hotmail.com': 'outlook.office365.com',
+            'live.com': 'outlook.office365.com',
+            'yahoo.com': 'imap.mail.yahoo.com',
+            'icloud.com': 'imap.mail.me.com',
+            'me.com': 'imap.mail.me.com',
+            'protonmail.com': 'imap.protonmail.com',
+            'proton.me': 'imap.protonmail.com',
+        }
+        return known.get(domain, f'imap.{domain}')
 
-        nodriver controls an undetected Chrome so Cloudflare Turnstile and
-        any other JS challenges are solved automatically inside the browser.
-        After login the auth cookies are extracted and stored.
+    async def _get_otp_from_imap(self, timeout: int = 60) -> Optional[str]:
+        """
+        Connect to the user's mailbox via IMAP and wait for the Axiom OTP email.
+
+        Searches unseen messages for a 6-digit code in any email that arrived
+        after this method was called, from any sender containing 'axiom'.
+
+        Args:
+            timeout: Seconds to wait for the email before giving up.
 
         Returns:
-            bool: True if tokens were extracted successfully.
+            The 6-digit OTP string, or None if not found in time.
+        """
+        import imaplib
+        import email as email_lib
+        import re
+        import asyncio
+
+        host = self.imap_host or self._detect_imap_host()
+        imap_pwd = self.imap_password or self.password
+
+        if not imap_pwd:
+            self.logger.warning("No IMAP password — cannot auto-read OTP")
+            return None
+
+        self.logger.info(f"📬 Connecting to IMAP ({host}) to auto-read OTP...")
+
+        try:
+            mail = imaplib.IMAP4_SSL(host)
+            mail.login(self.username, imap_pwd)
+            mail.select("INBOX")
+        except Exception as e:
+            self.logger.warning(f"IMAP connection failed: {e}")
+            self.logger.warning("Falling back to manual OTP entry")
+            return None
+
+        import time
+        start = time.time()
+        seen_ids: set = set()
+
+        # Snapshot existing unread IDs so we only look at NEW ones
+        try:
+            _, existing = mail.search(None, 'UNSEEN')
+            seen_ids = set(existing[0].split())
+        except Exception:
+            pass
+
+        try:
+            while time.time() - start < timeout:
+                await asyncio.sleep(2)
+                try:
+                    mail.check()  # flush any buffered state
+                    _, msgs = mail.search(None, 'UNSEEN')
+                    for msg_id in msgs[0].split():
+                        if msg_id in seen_ids:
+                            continue
+                        seen_ids.add(msg_id)
+
+                        _, data = mail.fetch(msg_id, '(RFC822)')
+                        msg = email_lib.message_from_bytes(data[0][1])
+
+                        sender = msg.get('From', '').lower()
+                        subject = msg.get('Subject', '').lower()
+
+                        if 'axiom' not in sender and 'axiom' not in subject:
+                            continue
+
+                        # Extract text body
+                        body = ''
+                        if msg.is_multipart():
+                            for part in msg.walk():
+                                if part.get_content_type() == 'text/plain':
+                                    body = part.get_payload(decode=True).decode(errors='replace')
+                                    break
+                            if not body:
+                                for part in msg.walk():
+                                    if part.get_content_type() == 'text/html':
+                                        body = part.get_payload(decode=True).decode(errors='replace')
+                                        break
+                        else:
+                            body = msg.get_payload(decode=True).decode(errors='replace')
+
+                        # Find 6-digit code (not part of a longer number)
+                        match = re.search(r'(?<!\d)(\d{6})(?!\d)', body)
+                        if match:
+                            otp = match.group(1)
+                            self.logger.info(f"✅ OTP found in email: {otp}")
+                            return otp
+
+                except Exception as e:
+                    self.logger.debug(f"IMAP poll error: {e}")
+
+        finally:
+            try:
+                mail.close()
+                mail.logout()
+            except Exception:
+                pass
+
+        self.logger.warning("OTP not found in inbox within timeout — falling back to manual entry")
+        return None
+
+    async def _login_with_browser(self) -> bool:
+        """
+        Full automated login flow via nodriver (real Chrome).
+
+        Steps:
+          1. Open axiom.trade, click Login button
+          2. Auto-fill email + password
+          3. Turnstile solves itself inside the real browser
+          4. Submit form
+          5. Get OTP — auto-reads from IMAP if imap_password is set,
+             otherwise prompts for manual terminal input
+          6. Submit OTP, extract auth cookies
+
+        Returns:
+            bool: True if tokens were successfully extracted.
         """
         import nodriver as uc
         import asyncio
@@ -372,119 +507,163 @@ class AuthManager:
         try:
             browser = await uc.start(headless=False)
             tab = await browser.get("https://axiom.trade")
-            await asyncio.sleep(4)
+
+            # ── Wait for page to settle ───────────────────────────────────────
+            await asyncio.sleep(5)
 
             # ── Open login modal ─────────────────────────────────────────────
-            self.logger.debug("Clicking Login button to open modal...")
-            login_btn = await tab.find("Login", best_match=True)
-            if not login_btn:
-                self.logger.error("Could not find Login button on axiom.trade homepage")
+            self.logger.debug("Opening login modal...")
+            opened = await tab.evaluate("""
+                (function() {
+                    var btns = document.querySelectorAll('button');
+                    for (var i = 0; i < btns.length; i++) {
+                        if (btns[i].innerText.trim() === 'Login') {
+                            btns[i].click(); return true;
+                        }
+                    }
+                    return false;
+                })()
+            """)
+            if not opened:
+                self.logger.error("Could not find Login button on axiom.trade")
                 return False
-            await login_btn.click()
-            await asyncio.sleep(2)
 
-            # ── Fill email ───────────────────────────────────────────────────
+            # ── Wait for email input to appear ───────────────────────────────
             email_field = await tab.select('input[placeholder="Enter email"]', timeout=10)
             if not email_field:
-                self.logger.error("Could not find email input in login modal")
+                self.logger.error("Login modal did not open — email input not found")
                 return False
+
+            await asyncio.sleep(0.5)
+
+            # ── Fill email ───────────────────────────────────────────────────
+            await email_field.clear_input()
             await email_field.send_keys(self.username)
-            self.logger.debug("Email entered")
+            self.logger.debug(f"Email entered: {self.username}")
 
             # ── Fill password ────────────────────────────────────────────────
             pw_field = await tab.select('input[placeholder="Enter password"]', timeout=5)
             if not pw_field:
-                self.logger.error("Could not find password input in login modal")
+                self.logger.error("Password input not found")
                 return False
+            await pw_field.clear_input()
             await pw_field.send_keys(self.password)
             self.logger.debug("Password entered")
 
-            # Give Turnstile a moment to auto-solve in the background
-            await asyncio.sleep(2)
+            # ── Give Turnstile time to auto-solve ────────────────────────────
+            self.logger.debug("Waiting for Turnstile to solve...")
+            await asyncio.sleep(4)
 
-            # ── Click submit (second "Login" button — the one inside the modal)
-            # The navbar Login is at the top of the page; the modal submit is lower.
-            submit_clicked = await tab.evaluate("""
+            # ── Submit the form ──────────────────────────────────────────────
+            # Click the Login button that's INSIDE the modal (y > 100px from top)
+            submitted = await tab.evaluate("""
                 (function() {
                     var btns = document.querySelectorAll('button');
                     for (var i = 0; i < btns.length; i++) {
                         var r = btns[i].getBoundingClientRect();
                         if (btns[i].innerText.trim() === 'Login' && r.top > 100) {
                             btns[i].click();
-                            return true;
+                            return r.top;
                         }
                     }
-                    return false;
+                    return 0;
                 })()
             """)
-            if not submit_clicked:
+            if not submitted:
                 self.logger.error("Could not find submit button inside login modal")
                 return False
-            self.logger.info("Login form submitted — waiting for OTP screen...")
+            self.logger.info(f"Form submitted (button at y≈{submitted:.0f}) — waiting for OTP screen...")
 
             # ── OTP step ─────────────────────────────────────────────────────
-            await asyncio.sleep(3)
+            # Start IMAP listener concurrently with waiting for the OTP input
+            otp_task = None
+            if self.imap_password:
+                self.logger.info("📬 IMAP configured — will auto-read OTP from your inbox")
+                otp_task = asyncio.create_task(self._get_otp_from_imap(timeout=90))
 
-            # Look for the OTP code input (6-digit code sent to email)
+            # Wait for OTP screen to appear
             otp_input = await tab.select(
                 'input[placeholder*="code" i], input[placeholder*="OTP" i], '
                 'input[placeholder*="verification" i], input[maxlength="6"]',
-                timeout=15
+                timeout=20
             )
 
-            if otp_input:
-                self.logger.info("📧 OTP screen detected — check your email for the code")
-                otp_code = input("Enter the OTP code sent to your email: ").strip()
+            if not otp_input:
+                self.logger.warning("OTP screen not detected — may have logged in directly or an error occurred")
+                if otp_task:
+                    otp_task.cancel()
+            else:
+                self.logger.info("📧 OTP screen detected")
+
+                if otp_task:
+                    # Wait for IMAP to return the code
+                    self.logger.info("⏳ Waiting for OTP email (up to 90s)...")
+                    otp_code = await otp_task
+                else:
+                    otp_code = None
+
                 if not otp_code:
-                    self.logger.error("OTP code is required")
+                    # Manual fallback
+                    self.logger.info("Manual OTP entry required")
+                    otp_code = input("Enter the OTP code sent to your email: ").strip()
+
+                if not otp_code:
+                    self.logger.error("No OTP code provided")
                     return False
 
+                self.logger.info(f"Entering OTP: {otp_code}")
+                await otp_input.clear_input()
                 await otp_input.send_keys(otp_code)
                 await asyncio.sleep(1)
 
-                # Submit OTP — find button near the OTP input
+                # Submit OTP — click the first visible button in the modal area
                 await tab.evaluate("""
                     (function() {
                         var btns = document.querySelectorAll('button');
                         for (var i = 0; i < btns.length; i++) {
                             var r = btns[i].getBoundingClientRect();
-                            if (r.top > 100) { btns[i].click(); return; }
+                            if (r.top > 100 && r.width > 0) { btns[i].click(); return; }
                         }
                     })()
                 """)
-                await asyncio.sleep(3)
-            else:
-                self.logger.debug("No OTP input found — may have logged in directly")
+                self.logger.info("OTP submitted — waiting for login to complete...")
+                await asyncio.sleep(5)
 
-            # ── Extract cookies ──────────────────────────────────────────────
-            self.logger.debug("Extracting auth cookies from browser...")
-            cookies = await browser.cookies.get_all()
-
+            # ── Poll for auth cookies ─────────────────────────────────────────
+            # Poll up to 15s in case the page is still loading
             access_token = None
             refresh_token = None
             cf_clearance = None
 
-            for cookie in cookies:
-                name = getattr(cookie, 'name', None) or cookie.get('name', '')
-                value = getattr(cookie, 'value', None) or cookie.get('value', '')
-                if name == 'auth-access-token':
-                    access_token = value
-                elif name == 'auth-refresh-token':
-                    refresh_token = value
-                elif name == 'cf_clearance':
-                    cf_clearance = value
+            for _ in range(15):
+                cookies = await browser.cookies.get_all()
+                for cookie in cookies:
+                    name = getattr(cookie, 'name', None) or cookie.get('name', '')
+                    value = getattr(cookie, 'value', None) or cookie.get('value', '')
+                    if name == 'auth-access-token' and value:
+                        access_token = value
+                    elif name == 'auth-refresh-token' and value:
+                        refresh_token = value
+                    elif name == 'cf_clearance' and value:
+                        cf_clearance = value
+
+                if access_token and refresh_token:
+                    break
+                await asyncio.sleep(1)
 
             if access_token and refresh_token:
                 self._set_tokens(access_token, refresh_token)
                 if cf_clearance:
                     self.cf_clearance = cf_clearance
-                    self.logger.info("✅ cf_clearance cookie also captured")
-                self.logger.info("✅ Browser login successful — tokens extracted")
+                    self.logger.info("✅ cf_clearance cookie captured")
+                self.logger.info("✅ Browser login successful — tokens saved")
                 return True
 
+            cookies = await browser.cookies.get_all()
             cookie_names = [getattr(c, 'name', None) or c.get('name', '') for c in cookies]
             self.logger.error(
-                f"❌ Auth cookies not found after login. Cookies present: {cookie_names}"
+                f"❌ Auth cookies not found after login. "
+                f"Cookies present: {[n for n in cookie_names if n]}"
             )
             return False
 
