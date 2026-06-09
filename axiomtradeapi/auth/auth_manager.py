@@ -516,6 +516,24 @@ class AuthManager:
             browser = await uc.start(headless=False)
             tab = await browser.get("https://axiom.trade")
 
+            # ── Minimize the browser window so the terminal stays in focus ───
+            try:
+                from nodriver import cdp
+                result = await browser.connection.send(
+                    cdp.browser.get_window_for_target(target_id=tab.target_id)
+                )
+                await browser.connection.send(
+                    cdp.browser.set_window_bounds(
+                        window_id=result.window_id,
+                        bounds=cdp.browser.Bounds(
+                            window_state=cdp.browser.WindowState.MINIMIZED
+                        )
+                    )
+                )
+                self.logger.debug("Browser window minimized")
+            except Exception as _e:
+                self.logger.debug(f"Could not minimize browser: {_e}")
+
             # ── Wait for page to settle ───────────────────────────────────────
             await asyncio.sleep(5)
 
