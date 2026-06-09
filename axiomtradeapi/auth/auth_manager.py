@@ -365,70 +365,96 @@ class AuthManager:
             bool: True if tokens were extracted successfully.
         """
         import nodriver as uc
+        import asyncio
 
         self.logger.info("🌐 Launching browser for Axiom Trade login...")
         browser = None
         try:
             browser = await uc.start(headless=False)
             tab = await browser.get("https://axiom.trade")
+            await asyncio.sleep(4)
 
-            # ── Wait for the login form ──────────────────────────────────────
-            self.logger.debug("Waiting for email field...")
-            email_field = await tab.select("input[type='email'], input[name='email'], input[placeholder*='mail' i]", timeout=20)
-            if not email_field:
-                self.logger.error("Could not find email input on axiom.trade")
+            # ── Open login modal ─────────────────────────────────────────────
+            self.logger.debug("Clicking Login button to open modal...")
+            login_btn = await tab.find("Login", best_match=True)
+            if not login_btn:
+                self.logger.error("Could not find Login button on axiom.trade homepage")
                 return False
+            await login_btn.click()
+            await asyncio.sleep(2)
 
+            # ── Fill email ───────────────────────────────────────────────────
+            email_field = await tab.select('input[placeholder="Enter email"]', timeout=10)
+            if not email_field:
+                self.logger.error("Could not find email input in login modal")
+                return False
             await email_field.send_keys(self.username)
             self.logger.debug("Email entered")
 
-            # Password field
-            password_field = await tab.select("input[type='password']", timeout=10)
-            if not password_field:
-                self.logger.error("Could not find password input on axiom.trade")
+            # ── Fill password ────────────────────────────────────────────────
+            pw_field = await tab.select('input[placeholder="Enter password"]', timeout=5)
+            if not pw_field:
+                self.logger.error("Could not find password input in login modal")
                 return False
-
-            await password_field.send_keys(self.password)
+            await pw_field.send_keys(self.password)
             self.logger.debug("Password entered")
 
-            # Submit button — look for common patterns
-            submit_btn = await tab.select(
-                "button[type='submit'], button:contains('Login'), button:contains('Sign in'), button:contains('Log in')",
-                timeout=10
-            )
-            if not submit_btn:
-                self.logger.error("Could not find submit button on axiom.trade")
+            # Give Turnstile a moment to auto-solve in the background
+            await asyncio.sleep(2)
+
+            # ── Click submit (second "Login" button — the one inside the modal)
+            # The navbar Login is at the top of the page; the modal submit is lower.
+            submit_clicked = await tab.evaluate("""
+                (function() {
+                    var btns = document.querySelectorAll('button');
+                    for (var i = 0; i < btns.length; i++) {
+                        var r = btns[i].getBoundingClientRect();
+                        if (btns[i].innerText.trim() === 'Login' && r.top > 100) {
+                            btns[i].click();
+                            return true;
+                        }
+                    }
+                    return false;
+                })()
+            """)
+            if not submit_clicked:
+                self.logger.error("Could not find submit button inside login modal")
                 return False
+            self.logger.info("Login form submitted — waiting for OTP screen...")
 
-            await submit_btn.click()
-            self.logger.info("Login form submitted — waiting for OTP screen or redirect...")
+            # ── OTP step ─────────────────────────────────────────────────────
+            await asyncio.sleep(3)
 
-            # ── OTP step ────────────────────────────────────────────────────
-            # Give Turnstile time to complete, then look for OTP input
-            await tab.sleep(3)
-
+            # Look for the OTP code input (6-digit code sent to email)
             otp_input = await tab.select(
-                "input[name='otp'], input[name='code'], input[placeholder*='code' i], input[placeholder*='OTP' i], input[maxlength='6']",
+                'input[placeholder*="code" i], input[placeholder*="OTP" i], '
+                'input[placeholder*="verification" i], input[maxlength="6"]',
                 timeout=15
             )
 
             if otp_input:
-                self.logger.info("OTP screen detected — check your email")
-                otp_code = input("Enter the OTP code sent to your email: ")
+                self.logger.info("📧 OTP screen detected — check your email for the code")
+                otp_code = input("Enter the OTP code sent to your email: ").strip()
                 if not otp_code:
                     self.logger.error("OTP code is required")
                     return False
 
                 await otp_input.send_keys(otp_code)
+                await asyncio.sleep(1)
 
-                otp_submit = await tab.select("button[type='submit']", timeout=5)
-                if otp_submit:
-                    await otp_submit.click()
-
-                await tab.sleep(3)
+                # Submit OTP — find button near the OTP input
+                await tab.evaluate("""
+                    (function() {
+                        var btns = document.querySelectorAll('button');
+                        for (var i = 0; i < btns.length; i++) {
+                            var r = btns[i].getBoundingClientRect();
+                            if (r.top > 100) { btns[i].click(); return; }
+                        }
+                    })()
+                """)
+                await asyncio.sleep(3)
             else:
-                # No OTP screen — may have logged in directly or failed
-                self.logger.debug("No OTP input found; assuming direct login or error")
+                self.logger.debug("No OTP input found — may have logged in directly")
 
             # ── Extract cookies ──────────────────────────────────────────────
             self.logger.debug("Extracting auth cookies from browser...")
@@ -455,16 +481,12 @@ class AuthManager:
                     self.logger.info("✅ cf_clearance cookie also captured")
                 self.logger.info("✅ Browser login successful — tokens extracted")
                 return True
-            else:
-                # Dump cookie names to help debug
-                cookie_names = [
-                    getattr(c, 'name', None) or c.get('name', '') for c in cookies
-                ]
-                self.logger.error(
-                    f"❌ Auth cookies not found after login. "
-                    f"Cookies present: {cookie_names}"
-                )
-                return False
+
+            cookie_names = [getattr(c, 'name', None) or c.get('name', '') for c in cookies]
+            self.logger.error(
+                f"❌ Auth cookies not found after login. Cookies present: {cookie_names}"
+            )
+            return False
 
         except Exception as e:
             self.logger.error(f"❌ Browser login error: {e}", exc_info=True)
