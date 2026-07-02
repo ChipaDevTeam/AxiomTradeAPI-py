@@ -11,6 +11,7 @@
 [![ChipaEditor](https://img.shields.io/badge/Built%20with-ChipaEditor-orange)](https://chipaeditor.com/?utm_source=github&utm_medium=readme&utm_campaign=axiomtradeapi&utm_term=badge&utm_content=shield)
 
 **The Professional Python SDK for Solana Trading on Axiom Trade**
+> **✨ Build with [Chipa Editor](https://chipaeditor.com/?utm_source=github&utm_medium=readme&utm_campaign=AxiomTradeAPI&utm_term=support&utm_content=header) — the AI-powered strategy editor for Traders. Try it free!**
 
 *Build advanced trading bots, monitor portfolios, and automate Solana DeFi strategies with enterprise-grade reliability*
 
