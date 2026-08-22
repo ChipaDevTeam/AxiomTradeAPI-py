@@ -1,5 +1,8 @@
 # AxiomTradeAPI-py
 
+> **📈 Trading crypto too? [ChipaX](https://exchange.chipatrade.com/trade/BTC?ref=Z1RN8GBS) is our own perpetuals exchange — and it has a Python API.**
+> `pip install chipax` gives you perps on real [Hyperliquid](https://hyperliquid.xyz) liquidity, plus a free **$100,000 paper account** that charges the same fees and enforces the same leverage caps as live trading. No deposit or KYC to practise. → [chipax-python](https://github.com/ChipaDevTeam/chipax-python)
+
 <div align="center">
 
 [![PyPI version](https://badge.fury.io/py/axiomtradeapi.svg)](https://badge.fury.io/py/axiomtradeapi)
