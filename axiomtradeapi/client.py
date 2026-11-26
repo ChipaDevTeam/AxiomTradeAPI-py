@@ -837,14 +837,21 @@ class AxiomTradeClient:
         if not self.ensure_authenticated():
             raise ValueError("Authentication failed. Please login first.")
         
-        url = f'https://api10.axiom.trade/dev-tokens-v2?devAddress={dev_address}'
+        # Current endpoint first, legacy endpoint as fallback
+        urls = [
+            f'https://rh-api3.axiom.trade/dev-tokens?devAddress={dev_address}',
+            f'https://api10.axiom.trade/dev-tokens-v2?devAddress={dev_address}',
+        ]
         
-        try:
-            response = self.auth_manager.make_authenticated_request('GET', url)
-            response.raise_for_status()
-            return response.json()
-        except Exception as e:
-            raise Exception(f"Failed to get dev tokens: {e}")
+        errors = []
+        for url in urls:
+            try:
+                response = self.auth_manager.make_authenticated_request('GET', url)
+                response.raise_for_status()
+                return response.json()
+            except Exception as e:
+                errors.append(f"{url} -> {e}")
+        raise Exception(f"Failed to get dev tokens: {'; '.join(errors)}")
     
     async def get_active_axiom_users(self, callback=None, duration: int = None, token_address: str = "FFcYgSSgWHforA9rXXkA48p8YFoz8TSW85Jpo3CQHDyS"):
         """
